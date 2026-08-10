@@ -1537,30 +1537,98 @@
     cursor:pointer;
     font-family:'Inter',sans-serif;
   }
-  .quick-assign{
-    margin-top:16px;
-    border-top:1px dashed var(--rule);
-    padding-top:12px;
+  .student-cals{
+    margin-top:18px;
   }
-  .quick-assign-strip{
+  .student-cals-head{
     display:flex;
-    gap:8px;
-    overflow-x:auto;
-    padding-bottom:4px;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:12px;
   }
-  .quick-assign-day{
-    min-width:74px;
+  .student-cals-head h3{
+    font-family:'Kalam',cursive;
+    font-size:17px;
+    margin:0;
+  }
+  .student-cal-card{
+    background: var(--paper);
+    border-radius:8px;
+    border-left:5px solid var(--moss);
+    padding:12px 14px 14px;
+    box-shadow: var(--paper-shadow), 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom:12px;
+  }
+  .student-cal-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .student-cal-name{
+    font-family:'Kalam',cursive;
+    font-size:14.5px;
+    font-weight:700;
+  }
+  .student-cal-row{
+    display:grid;
+    grid-template-columns:repeat(7, minmax(90px, 1fr));
+    gap:6px;
+    overflow-x:auto;
+  }
+  .student-cal-cell{
     background: var(--paper-dark);
     border-radius:6px;
-    padding:8px 6px;
-    text-align:center;
-    font-family:'Space Mono',monospace;
-    flex-shrink:0;
+    padding:6px;
+    min-height:70px;
     border:1.5px dashed transparent;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
   }
-  .quick-assign-day.dragover{ border-color:var(--gold); background:rgba(217,164,65,0.2); }
-  .quick-assign-day .qad-dow{ font-weight:700; font-size:11px; }
-  .quick-assign-day .qad-date{ color:var(--ink-soft); font-size:10px; margin-top:1px; }
+  .student-cal-cell.dragover{ border-color:var(--gold); background:rgba(217,164,65,0.22); }
+  .scc-date{
+    display:flex;
+    align-items:baseline;
+    gap:5px;
+    font-family:'Space Mono',monospace;
+  }
+  .scc-dow{ font-weight:700; font-size:10.5px; }
+  .scc-num{ font-size:10px; color:var(--ink-soft); }
+  .scc-items{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .scc-chip{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    border-radius:4px;
+    padding:3px 5px;
+    color:#fff;
+  }
+  .scc-chip-name{
+    font-size:10px;
+    font-weight:600;
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .scc-chip-del{
+    background:none;
+    border:none;
+    color:#fff;
+    opacity:0.8;
+    cursor:pointer;
+    font-size:11px;
+    padding:0;
+    line-height:1;
+  }
+  .scc-chip-del:hover{ opacity:1; }
 </style>
 </head>
 <body>
@@ -2631,6 +2699,7 @@ let activeAvatarStudentId = null;
 let draftAvatar = null;
 let activeSubjectId = null;
 let lessonBankFilter = 'all'; // 'all' or a student id, scoped to whichever subject page is open
+let subjectCalWeekOffset = 0; // week offset for the student calendars on a subject page
 let attendanceWeekOffset = 0;
 let attendancePeriod = 'all'; // 'all', 'week', 'month', 'year', or 'custom'
 let attendanceCustomStart = '';
@@ -2701,6 +2770,7 @@ function renderSubjectNav(){
       currentView = 'subject';
       activeSubjectId = s.id;
       lessonBankFilter = 'all';
+      subjectCalWeekOffset = 0;
       menu.classList.remove('open');
       renderView();
     });
@@ -3663,34 +3733,83 @@ function renderLessonBank(subj){
   });
 }
 
-function renderQuickAssignStrip(subj){
-  const strip = document.getElementById('quickAssignStrip');
-  if(!strip) return;
-  strip.innerHTML = '';
-  const today = new Date();
-  for(let i=0;i<10;i++){
-    const d = new Date(today);
-    d.setDate(today.getDate()+i);
-    const tile = document.createElement('div');
-    tile.className = 'quick-assign-day';
-    tile.innerHTML = `<div class="qad-dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div><div class="qad-date">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
-    tile.addEventListener('dragover', (e)=>{
-      e.preventDefault();
-      tile.classList.add('dragover');
-    });
-    tile.addEventListener('dragleave', ()=> tile.classList.remove('dragover'));
-    tile.addEventListener('drop', (e)=>{
-      e.preventDefault();
-      tile.classList.remove('dragover');
-      if(!dragPayload || dragPayload.type !== 'lesson') return;
-      const {weekOffset, dayIndex} = dateToSlot(d);
-      const key = weekOffset + '|' + dayIndex;
-      addLessonTask(key, null, dragPayload.name, dragPayload.color, dragPayload.subjectId, dragPayload.studentId);
-      dragPayload = null;
-      renderSubjectPage();
-    });
-    strip.appendChild(tile);
+function renderStudentCalendars(subj){
+  const label = document.getElementById('subjCalWeekLabel');
+  const sunday = getSunday(subjectCalWeekOffset);
+  if(label) label.textContent = fmtRange(sunday, 7);
+
+  const list = document.getElementById('studentCalList');
+  if(!list) return;
+  list.innerHTML = '';
+
+  if(state.students.length === 0){
+    list.innerHTML = '<p class="subject-empty">Add a student on the Calendar page to schedule lessons for them here.</p>';
+    return;
   }
+
+  state.students.forEach(s=>{
+    const card = document.createElement('div');
+    card.className = 'student-cal-card';
+    card.style.borderLeftColor = s.color;
+
+    const cardHead = document.createElement('div');
+    cardHead.className = 'student-cal-head';
+    cardHead.innerHTML = `${avatarMarkup(s, 24)}<span class="student-cal-name">${escapeHtml(s.name)}</span>`;
+    card.appendChild(cardHead);
+
+    const row = document.createElement('div');
+    row.className = 'student-cal-row';
+
+    for(let i=0;i<7;i++){
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate()+i);
+      const key = subjectCalWeekOffset + '|' + i;
+      const tasks = (state.schedule[key] || []).filter(t=> t.studentId === s.id);
+
+      const cell = document.createElement('div');
+      cell.className = 'student-cal-cell';
+      cell.innerHTML = `<div class="scc-date"><span class="scc-dow">${DAY_NAMES[i].slice(0,3)}</span><span class="scc-num">${d.getDate()}</span></div>`;
+
+      const itemsWrap = document.createElement('div');
+      itemsWrap.className = 'scc-items';
+      tasks.forEach(t=>{
+        const chip = document.createElement('div');
+        chip.className = 'scc-chip';
+        chip.style.background = t.color;
+        chip.title = t.name;
+        chip.innerHTML = `<span class="scc-chip-name">${escapeHtml(t.name)}</span><button class="scc-chip-del">&times;</button>`;
+        chip.querySelector('.scc-chip-del').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          state.schedule[key] = (state.schedule[key] || []).filter(x=>x.id !== t.id);
+          saveState();
+          renderStudentCalendars(subj);
+        });
+        itemsWrap.appendChild(chip);
+      });
+      cell.appendChild(itemsWrap);
+
+      cell.addEventListener('dragover', (e)=>{
+        if(dragPayload && dragPayload.type === 'lesson'){
+          e.preventDefault();
+          cell.classList.add('dragover');
+        }
+      });
+      cell.addEventListener('dragleave', ()=> cell.classList.remove('dragover'));
+      cell.addEventListener('drop', (e)=>{
+        if(!dragPayload || dragPayload.type !== 'lesson') return;
+        e.preventDefault();
+        cell.classList.remove('dragover');
+        addLessonTask(key, null, dragPayload.name, dragPayload.color, dragPayload.subjectId, s.id);
+        dragPayload = null;
+        renderSubjectPage();
+      });
+
+      row.appendChild(cell);
+    }
+
+    card.appendChild(row);
+    list.appendChild(card);
+  });
 }
 
 function readFileAsBase64(file){
@@ -3790,11 +3909,19 @@ function renderSubjectPage(){
 
       <div class="lesson-filter" id="lessonFilter"></div>
       <div class="lesson-bank" id="lessonBank"></div>
+      <p class="hint">Drag a lesson onto a day in a student's calendar below, or use "Assign to a day" on the lesson itself.</p>
+    </div>
 
-      <div class="quick-assign">
-        <p class="hint">Drag a lesson onto a day, or use "Assign to a day" on the lesson itself.</p>
-        <div class="quick-assign-strip" id="quickAssignStrip"></div>
+    <div class="student-cals">
+      <div class="student-cals-head">
+        <h3>Student Calendars</h3>
+        <div class="attendance-week-nav">
+          <button id="subjCalPrev" aria-label="Previous week">&#8249;</button>
+          <span id="subjCalWeekLabel"></span>
+          <button id="subjCalNext" aria-label="Next week">&#8250;</button>
+        </div>
       </div>
+      <div id="studentCalList"></div>
     </div>
 
     <div class="subject-entries" id="subjectEntries"></div>
@@ -3903,7 +4030,16 @@ function renderSubjectPage(){
 
   renderLessonFilter(subj);
   renderLessonBank(subj);
-  renderQuickAssignStrip(subj);
+  renderStudentCalendars(subj);
+
+  document.getElementById('subjCalPrev').addEventListener('click', ()=>{
+    subjectCalWeekOffset -= 1;
+    renderStudentCalendars(subj);
+  });
+  document.getElementById('subjCalNext').addEventListener('click', ()=>{
+    subjectCalWeekOffset += 1;
+    renderStudentCalendars(subj);
+  });
 
   const list = document.getElementById('subjectEntries');
 
