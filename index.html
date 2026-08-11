@@ -4455,7 +4455,7 @@ function renderSubjectPage(){
 
     <div class="subject-split">
       <div class="subject-left">
-        <div class="lesson-plans-panel">
+        <div class="lesson-plans-panel" style="border-top-color:${subj.color}">
           <div class="lesson-plans-head">
             <h3>Lesson plans</h3>
             <div class="lesson-plans-actions">
@@ -4488,7 +4488,7 @@ function renderSubjectPage(){
           <p class="hint">Drag a lesson onto the calendar to the right, or use "Assign to a day" on the lesson itself. Drag it again as many times as you like — each drop adds a new, independent copy.</p>
         </div>
 
-        <div class="auto-schedule-panel">
+        <div class="auto-schedule-panel" style="border-top-color:${subj.color}">
           <h3>Auto-schedule lessons</h3>
           <label class="lesson-for-label">Student
             <select id="autoScheduleStudent"></select>
@@ -4502,7 +4502,7 @@ function renderSubjectPage(){
           <p class="hint" id="autoScheduleStatus">Picks up that student's lessons in order and lays them out one per checked day, starting from the date above, until every lesson has a spot.</p>
         </div>
 
-        <div class="multi-assign-panel">
+        <div class="multi-assign-panel" style="border-top-color:${subj.color}">
           <h3>Add "${escapeHtml(subj.name)}" to multiple students</h3>
           <div class="multi-assign-students" id="multiAssignStudents"></div>
           <div class="multi-assign-row">
@@ -4514,7 +4514,7 @@ function renderSubjectPage(){
         </div>
       </div>
 
-      <div class="subject-right">
+      <div class="subject-right" style="border-top:4px solid ${subj.color};">
         <div class="subject-cal-head">
           <div class="view-toggle" id="subjViewToggle">
             <button class="view-btn" data-view="day">Day</button>
