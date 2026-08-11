@@ -517,6 +517,28 @@
     line-height:1;
   }
   .chip .del:hover{ color:var(--cover); }
+  .chip.chip-confirm{
+    gap:8px;
+    border-color:var(--cover);
+    background:var(--paper-dark);
+  }
+  .chip-confirm-text{
+    font-size:11.5px;
+    color:var(--ink);
+  }
+  .chip-confirm-yes, .chip-confirm-no{
+    border:none;
+    border-radius:5px;
+    padding:4px 9px;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .chip-confirm-yes{ background:var(--cover); color:#fff; }
+  .chip-confirm-yes:hover{ background:var(--cover-dark); }
+  .chip-confirm-no{ background:#fff; border:1px solid var(--rule); color:var(--ink-soft); }
+  .chip-confirm-no:hover{ background:var(--paper-dark); }
   .chip.all{
     background: var(--ink);
     color: var(--paper);
@@ -1422,6 +1444,35 @@
     background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:13px; padding:0 2px; flex-shrink:0;
   }
   .lesson-chip-top .del:hover{ color:var(--cover); }
+  .lesson-confirm{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+    background:var(--paper-dark);
+    border:1px solid var(--cover);
+    border-radius:6px;
+    padding:6px 8px;
+    margin-top:4px;
+  }
+  .lesson-confirm-text{
+    font-size:11px;
+    color:var(--ink);
+    flex:1;
+  }
+  .lesson-confirm-yes, .lesson-confirm-no{
+    border:none;
+    border-radius:5px;
+    padding:4px 9px;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .lesson-confirm-yes{ background:var(--cover); color:#fff; }
+  .lesson-confirm-yes:hover{ background:var(--cover-dark); }
+  .lesson-confirm-no{ background:#fff; border:1px solid var(--rule); color:var(--ink-soft); }
+  .lesson-confirm-no:hover{ background:var(--paper-dark); }
   .lesson-add-row{ flex-wrap:wrap; }
   .bulk-lesson-row{
     display:flex;
@@ -2335,10 +2386,25 @@ function renderRoster(){
       draftAvatar = Object.assign({}, defaultAvatar(), s.avatar || {});
       renderView();
     });
-    chip.querySelector('.del').addEventListener('click', ()=>{
-      state.students = state.students.filter(x=>x.id!==s.id);
-      if(state.studentFilter === s.id) state.studentFilter = 'all';
-      saveState(); render();
+    chip.querySelector('.del').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(chip.classList.contains('chip-confirm')) return;
+      chip.classList.add('chip-confirm');
+      chip.innerHTML = `
+        <span class="chip-confirm-text">Remove ${escapeHtml(s.name)}?</span>
+        <button type="button" class="chip-confirm-yes">Yes</button>
+        <button type="button" class="chip-confirm-no">No</button>
+      `;
+      chip.querySelector('.chip-confirm-yes').addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        state.students = state.students.filter(x=>x.id!==s.id);
+        if(state.studentFilter === s.id) state.studentFilter = 'all';
+        saveState(); render();
+      });
+      chip.querySelector('.chip-confirm-no').addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        renderRoster();
+      });
     });
     row.insertBefore(chip, addForm);
   });
@@ -3775,9 +3841,23 @@ function renderLessonBank(subj){
     chip.addEventListener('dragend', ()=> chip.classList.remove('dragging'));
 
     chip.querySelector('.del').addEventListener('click', ()=>{
-      subj.lessons = (subj.lessons || []).filter(l=>l.id !== lesson.id);
-      saveState();
-      renderLessonBank(subj);
+      if(chip.querySelector('.lesson-confirm')) return;
+      const confirmWrap = document.createElement('div');
+      confirmWrap.className = 'lesson-confirm';
+      confirmWrap.innerHTML = `
+        <span class="lesson-confirm-text">Delete this lesson?</span>
+        <button type="button" class="lesson-confirm-yes">Yes</button>
+        <button type="button" class="lesson-confirm-no">No</button>
+      `;
+      chip.appendChild(confirmWrap);
+      confirmWrap.querySelector('.lesson-confirm-yes').addEventListener('click', ()=>{
+        subj.lessons = (subj.lessons || []).filter(l=>l.id !== lesson.id);
+        saveState();
+        renderLessonBank(subj);
+      });
+      confirmWrap.querySelector('.lesson-confirm-no').addEventListener('click', ()=>{
+        confirmWrap.remove();
+      });
     });
 
     chip.querySelector('.lesson-student-select').addEventListener('change', (e)=>{
