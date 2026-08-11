@@ -285,8 +285,16 @@
     font-family:'Space Mono',monospace;
   }
   .cal-day-head.weekend{ border-top-color:var(--plum); }
+  .cal-day-head.is-holiday{ border-top-color:var(--cover); background:rgba(181,72,47,0.08); }
   .cal-day-head .name{ font-weight:700; font-size:12px; letter-spacing:.5px; text-transform:uppercase; }
   .cal-day-head .date{ font-size:10.5px; color:var(--ink-soft); margin-top:1px; }
+  .cal-day-head .holiday-name{
+    font-size:9px;
+    color:var(--cover);
+    font-weight:700;
+    margin-top:2px;
+    font-style:italic;
+  }
   .cal-time-label{
     font-family:'Space Mono',monospace;
     font-size:10px;
@@ -506,6 +514,16 @@
   .month-day-cell:hover{ background:var(--paper-dark); }
   .month-day-cell.outside{ opacity:.4; }
   .month-day-cell.today{ box-shadow:inset 0 0 0 2px var(--gold); }
+  .month-day-cell.is-holiday{ background:rgba(181,72,47,0.07); }
+  .month-holiday-tag{
+    font-size:8.5px;
+    font-weight:700;
+    color:var(--cover);
+    font-style:italic;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .month-day-num{
     font-family:'Space Mono',monospace;
     font-size:11px;
@@ -1700,8 +1718,28 @@
     gap:6px;
   }
   .subj-day-cell.dragover{ border-color:var(--gold); background:rgba(217,164,65,0.22); }
+  .subj-day-cell.is-holiday{ background:rgba(181,72,47,0.08); }
   .subj-day-cell .scc-chip{ padding:6px 8px; }
   .subj-day-cell .scc-chip-name{ font-size:12px; }
+
+  .auto-schedule-panel{
+    background: var(--paper);
+    border-radius:8px;
+    border-top:4px solid var(--moss);
+    padding:14px 16px 16px;
+    box-shadow: var(--paper-shadow), 0 2px 8px rgba(0,0,0,0.06);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .auto-schedule-panel h3{
+    font-family:'Kalam',cursive;
+    font-size:15px;
+    margin:0;
+  }
+  .auto-schedule-panel .lesson-for-label select{
+    margin-left:6px;
+  }
 
   .multi-assign-panel{
     background: var(--paper);
@@ -1765,6 +1803,16 @@
     gap:4px;
   }
   .student-cal-cell.dragover{ border-color:var(--gold); background:rgba(217,164,65,0.22); }
+  .student-cal-cell.is-holiday{ background:rgba(181,72,47,0.1); }
+  .scc-holiday{
+    font-size:8.5px;
+    font-weight:700;
+    color:var(--cover);
+    font-style:italic;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .scc-date{
     display:flex;
     align-items:baseline;
@@ -2645,6 +2693,46 @@ function dateToSlot(date){
   return {weekOffset, dayIndex};
 }
 
+function nthWeekdayOfMonth(year, month, weekday, n){
+  const first = new Date(year, month, 1);
+  const firstWeekday = first.getDay();
+  const day = 1 + ((7 + weekday - firstWeekday) % 7) + (n-1)*7;
+  return new Date(year, month, day);
+}
+
+function lastWeekdayOfMonth(year, month, weekday){
+  const lastDay = new Date(year, month+1, 0).getDate();
+  const last = new Date(year, month, lastDay);
+  const diff = (7 + last.getDay() - weekday) % 7;
+  return new Date(year, month, lastDay - diff);
+}
+
+const holidayCache = {};
+function getHolidaysForYear(year){
+  if(holidayCache[year]) return holidayCache[year];
+  const list = [
+    {date: isoDate(new Date(year,0,1)), name:"New Year's Day"},
+    {date: isoDate(nthWeekdayOfMonth(year,0,1,3)), name:"Martin Luther King Jr. Day"},
+    {date: isoDate(nthWeekdayOfMonth(year,1,1,3)), name:"Presidents Day"},
+    {date: isoDate(lastWeekdayOfMonth(year,4,1)), name:"Memorial Day"},
+    {date: isoDate(new Date(year,5,19)), name:"Juneteenth"},
+    {date: isoDate(new Date(year,6,4)), name:"Independence Day"},
+    {date: isoDate(nthWeekdayOfMonth(year,8,1,1)), name:"Labor Day"},
+    {date: isoDate(nthWeekdayOfMonth(year,9,1,2)), name:"Columbus Day"},
+    {date: isoDate(new Date(year,10,11)), name:"Veterans Day"},
+    {date: isoDate(nthWeekdayOfMonth(year,10,4,4)), name:"Thanksgiving Day"},
+    {date: isoDate(new Date(year,11,25)), name:"Christmas Day"}
+  ];
+  holidayCache[year] = list;
+  return list;
+}
+
+function getHoliday(dateObj){
+  const iso = isoDate(dateObj);
+  const holidays = getHolidaysForYear(dateObj.getFullYear());
+  return holidays.find(h => h.date === iso) || null;
+}
+
 function renderCalendar(){
   document.querySelectorAll('.view-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.view === state.calendarView);
@@ -2690,9 +2778,10 @@ function renderWeekCalendar(){
   indices.forEach(i=>{
     const dateObj = new Date(sunday);
     dateObj.setDate(sunday.getDate()+i);
+    const holiday = getHoliday(dateObj);
     const head = document.createElement('div');
-    head.className = 'cal-day-head' + ((i===0||i===6)?' weekend':'');
-    head.innerHTML = `<div class="name">${DAY_NAMES[i]}</div><div class="date">${dateObj.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
+    head.className = 'cal-day-head' + ((i===0||i===6)?' weekend':'') + (holiday?' is-holiday':'');
+    head.innerHTML = `<div class="name">${DAY_NAMES[i]}</div><div class="date">${dateObj.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>${holiday?`<div class="holiday-name">${escapeHtml(holiday.name)}</div>`:''}`;
     cal.appendChild(head);
   });
 
@@ -2734,9 +2823,10 @@ function renderDayCalendar(){
   corner.className = 'cal-corner';
   cal.appendChild(corner);
 
+  const dayHoliday = getHoliday(date);
   const head = document.createElement('div');
-  head.className = 'cal-day-head' + ((dayIndex===0||dayIndex===6)?' weekend':'');
-  head.innerHTML = `<div class="name">${DAY_NAMES[dayIndex]}</div><div class="date">${date.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
+  head.className = 'cal-day-head' + ((dayIndex===0||dayIndex===6)?' weekend':'') + (dayHoliday?' is-holiday':'');
+  head.innerHTML = `<div class="name">${DAY_NAMES[dayIndex]}</div><div class="date">${date.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>${dayHoliday?`<div class="holiday-name">${escapeHtml(dayHoliday.name)}</div>`:''}`;
   cal.appendChild(head);
 
   const anytimeLabel = document.createElement('div');
@@ -2792,25 +2882,34 @@ function renderMonthGrid(){
     const key = weekOffset + '|' + dayIndex;
 
     const cell = document.createElement('div');
-    cell.className = 'month-day-cell' + (isOutside?' outside':'') + (isoDate(cellDate)===todayIso?' today':'');
+    const cellHoliday = getHoliday(cellDate);
+    cell.className = 'month-day-cell' + (isOutside?' outside':'') + (isoDate(cellDate)===todayIso?' today':'') + (cellHoliday?' is-holiday':'');
 
     const num = document.createElement('div');
     num.className = 'month-day-num';
     num.textContent = cellDate.getDate();
     cell.appendChild(num);
 
+    if(cellHoliday){
+      const htag = document.createElement('div');
+      htag.className = 'month-holiday-tag';
+      htag.textContent = cellHoliday.name;
+      cell.appendChild(htag);
+    }
+
     const tasks = (state.schedule[key] || []).filter(t=> state.studentFilter==='all' || t.studentId===state.studentFilter);
-    tasks.slice(0,3).forEach(t=>{
+    const pillLimit = cellHoliday ? 2 : 3;
+    tasks.slice(0,pillLimit).forEach(t=>{
       const pill = document.createElement('div');
       pill.className = 'month-pill';
       pill.style.background = t.color;
       pill.textContent = t.name;
       cell.appendChild(pill);
     });
-    if(tasks.length > 3){
+    if(tasks.length > pillLimit){
       const more = document.createElement('div');
       more.className = 'month-more';
-      more.textContent = '+' + (tasks.length-3) + ' more';
+      more.textContent = '+' + (tasks.length-pillLimit) + ' more';
       cell.appendChild(more);
     }
 
@@ -4131,7 +4230,8 @@ function subjectCalDropTarget(cell, key, subj, rerender){
 function renderSubjectCalDay(subj){
   const body = document.getElementById('subjCalBody');
   const d = parseIsoDate(subjectCalDate);
-  document.getElementById('subjCalLabel').textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  const dHoliday = getHoliday(d);
+  document.getElementById('subjCalLabel').textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'}) + (dHoliday ? ' — ' + dHoliday.name : '');
 
   const {weekOffset, dayIndex} = dateToSlot(d);
   const key = weekOffset + '|' + dayIndex;
@@ -4139,7 +4239,13 @@ function renderSubjectCalDay(subj){
 
   body.innerHTML = '';
   const cell = document.createElement('div');
-  cell.className = 'subj-day-cell';
+  cell.className = 'subj-day-cell' + (dHoliday ? ' is-holiday' : '');
+  if(dHoliday){
+    const htag = document.createElement('div');
+    htag.className = 'month-holiday-tag';
+    htag.textContent = dHoliday.name;
+    cell.appendChild(htag);
+  }
   if(tasks.length === 0){
     const empty = document.createElement('p');
     empty.className = 'chore-empty-msg';
@@ -4169,10 +4275,11 @@ function renderSubjectCalWeek(subj){
     d.setDate(sunday.getDate()+i);
     const key = weekOffset + '|' + i;
     const tasks = subjectFilteredTasks(key, subj);
+    const dHoliday = getHoliday(d);
 
     const cell = document.createElement('div');
-    cell.className = 'student-cal-cell';
-    cell.innerHTML = `<div class="scc-date"><span class="scc-dow">${DAY_NAMES[i].slice(0,3)}</span><span class="scc-num">${d.getDate()}</span></div>`;
+    cell.className = 'student-cal-cell' + (dHoliday ? ' is-holiday' : '');
+    cell.innerHTML = `<div class="scc-date"><span class="scc-dow">${DAY_NAMES[i].slice(0,3)}</span><span class="scc-num">${d.getDate()}</span></div>${dHoliday?`<div class="scc-holiday">${escapeHtml(dHoliday.name)}</div>`:''}`;
 
     const itemsWrap = document.createElement('div');
     itemsWrap.className = 'scc-items';
@@ -4219,26 +4326,35 @@ function renderSubjectCalMonth(subj){
     const {weekOffset, dayIndex} = dateToSlot(cellDate);
     const key = weekOffset + '|' + dayIndex;
     const tasks = subjectFilteredTasks(key, subj);
+    const cellHoliday = getHoliday(cellDate);
 
     const cell = document.createElement('div');
-    cell.className = 'month-day-cell' + (isOutside?' outside':'') + (isoDate(cellDate)===todayIso?' today':'');
+    cell.className = 'month-day-cell' + (isOutside?' outside':'') + (isoDate(cellDate)===todayIso?' today':'') + (cellHoliday?' is-holiday':'');
 
     const num = document.createElement('div');
     num.className = 'month-day-num';
     num.textContent = cellDate.getDate();
     cell.appendChild(num);
 
-    tasks.slice(0,3).forEach(t=>{
+    if(cellHoliday){
+      const htag = document.createElement('div');
+      htag.className = 'month-holiday-tag';
+      htag.textContent = cellHoliday.name;
+      cell.appendChild(htag);
+    }
+
+    const pillLimit = cellHoliday ? 2 : 3;
+    tasks.slice(0,pillLimit).forEach(t=>{
       const pill = document.createElement('div');
       pill.className = 'month-pill';
       pill.style.background = t.color;
       pill.textContent = t.name;
       cell.appendChild(pill);
     });
-    if(tasks.length > 3){
+    if(tasks.length > pillLimit){
       const more = document.createElement('div');
       more.className = 'month-more';
-      more.textContent = '+' + (tasks.length-3) + ' more';
+      more.textContent = '+' + (tasks.length-pillLimit) + ' more';
       cell.appendChild(more);
     }
 
@@ -4370,6 +4486,20 @@ function renderSubjectPage(){
           <div class="lesson-filter" id="lessonFilter"></div>
           <div class="lesson-bank" id="lessonBank"></div>
           <p class="hint">Drag a lesson onto the calendar to the right, or use "Assign to a day" on the lesson itself. Drag it again as many times as you like — each drop adds a new, independent copy.</p>
+        </div>
+
+        <div class="auto-schedule-panel">
+          <h3>Auto-schedule lessons</h3>
+          <label class="lesson-for-label">Student
+            <select id="autoScheduleStudent"></select>
+          </label>
+          <div class="repeat-days" id="autoScheduleDays"></div>
+          <div class="repeat-fields">
+            <input type="date" id="autoScheduleStart" />
+            <label class="repeat-weeks-label"><input type="checkbox" id="autoScheduleSkipHolidays" checked /> Skip holidays</label>
+          </div>
+          <button class="go" id="autoScheduleBtn">Auto-schedule all their lessons</button>
+          <p class="hint" id="autoScheduleStatus">Picks up that student's lessons in order and lays them out one per checked day, starting from the date above, until every lesson has a spot.</p>
         </div>
 
         <div class="multi-assign-panel">
@@ -4508,6 +4638,71 @@ function renderSubjectPage(){
 
   renderLessonFilter(subj);
   renderLessonBank(subj);
+
+  // --- Auto-schedule lessons panel ---
+  const autoStudentSelect = document.getElementById('autoScheduleStudent');
+  autoStudentSelect.innerHTML = state.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  if(state.students.length === 0){
+    autoStudentSelect.innerHTML = '<option value="">No students yet</option>';
+  }
+
+  const autoDaysWrap = document.getElementById('autoScheduleDays');
+  const autoDayLetters = ['S','M','T','W','T','F','S'];
+  autoDaysWrap.innerHTML = autoDayLetters.map((l,i)=>{
+    const checked = (i>=1 && i<=5) ? 'checked' : '';
+    return `<label class="repeat-day-box"><input type="checkbox" value="${i}" ${checked}/>${l}</label>`;
+  }).join('');
+
+  document.getElementById('autoScheduleStart').value = isoDate(new Date());
+
+  document.getElementById('autoScheduleBtn').addEventListener('click', ()=>{
+    const statusEl = document.getElementById('autoScheduleStatus');
+    const studentId = autoStudentSelect.value;
+    if(!studentId){
+      statusEl.textContent = 'Add a student first.';
+      return;
+    }
+    const checkedDays = Array.from(autoDaysWrap.querySelectorAll('input:checked')).map(cb=>parseInt(cb.value,10));
+    if(checkedDays.length === 0){
+      statusEl.textContent = 'Pick at least one day of the week.';
+      return;
+    }
+    const startVal = document.getElementById('autoScheduleStart').value;
+    if(!startVal){
+      statusEl.textContent = 'Pick a start date.';
+      return;
+    }
+    const skipHolidays = document.getElementById('autoScheduleSkipHolidays').checked;
+    const lessonsToPlace = (subj.lessons || []).filter(l => l.studentId === studentId || !l.studentId);
+    if(lessonsToPlace.length === 0){
+      statusEl.textContent = 'No lessons in the bank for that student yet.';
+      return;
+    }
+
+    let cursor = parseIsoDate(startVal);
+    let placed = 0, skippedHolidays = 0, guard = 0;
+    while(placed < lessonsToPlace.length && guard < 2000){
+      guard++;
+      if(checkedDays.includes(cursor.getDay())){
+        const holiday = skipHolidays ? getHoliday(cursor) : null;
+        if(holiday){
+          skippedHolidays++;
+        } else {
+          const {weekOffset, dayIndex} = dateToSlot(cursor);
+          const key = weekOffset + '|' + dayIndex;
+          const lesson = lessonsToPlace[placed];
+          addLessonTask(key, null, lesson.text, subj.color, subj.id, studentId);
+          placed++;
+        }
+      }
+      cursor = new Date(cursor);
+      cursor.setDate(cursor.getDate()+1);
+    }
+    const lastDate = new Date(cursor);
+    lastDate.setDate(lastDate.getDate()-1);
+    statusEl.textContent = `Scheduled ${placed} lesson${placed===1?'':'s'}, ${startVal} through ${isoDate(lastDate)}` + (skippedHolidays ? ` (skipped ${skippedHolidays} holiday${skippedHolidays===1?'':'s'})` : '') + '.';
+    renderCalendar();
+  });
 
   // --- Multi-student subject assign panel ---
   const multiWrap = document.getElementById('multiAssignStudents');
