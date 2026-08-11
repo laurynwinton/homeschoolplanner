@@ -1679,6 +1679,14 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
+  .scc-chip-student{
+    font-size:8.5px;
+    font-weight:700;
+    background:rgba(255,255,255,0.3);
+    border-radius:4px;
+    padding:1px 4px;
+    flex-shrink:0;
+  }
   .scc-chip-del{
     background:none;
     border:none;
@@ -3853,7 +3861,10 @@ function subjectCalChip(t, key, subj, onRemoved){
   const student = state.students.find(s=>s.id === t.studentId);
   const timeLabel = t.slot ? formatSlotLabel(t.slot) : 'Any time';
   chip.title = t.name + ' — ' + timeLabel + (student ? ' — ' + student.name : '');
-  chip.innerHTML = `<span class="scc-chip-name">${escapeHtml(t.name)}</span><button class="scc-chip-del">&times;</button>`;
+  const studentTag = (subjectCalStudentId === 'all' && student)
+    ? `<span class="scc-chip-student">${escapeHtml(student.name)}</span>`
+    : '';
+  chip.innerHTML = `<span class="scc-chip-name">${escapeHtml(t.name)}</span>${studentTag}<button class="scc-chip-del">&times;</button>`;
   chip.querySelector('.scc-chip-del').addEventListener('click', (e)=>{
     e.stopPropagation();
     state.schedule[key] = (state.schedule[key] || []).filter(x=>x.id !== t.id);
@@ -3875,8 +3886,13 @@ function subjectCalDropTarget(cell, key, subj, rerender){
     if(!dragPayload || dragPayload.type !== 'lesson') return;
     e.preventDefault();
     cell.classList.remove('dragover');
-    const targetStudent = subjectCalStudentId === 'all' ? dragPayload.studentId : subjectCalStudentId;
-    addLessonTask(key, null, dragPayload.name, dragPayload.color, dragPayload.subjectId, targetStudent);
+    if(subjectCalStudentId === 'all'){
+      state.students.forEach(s=>{
+        addLessonTask(key, null, dragPayload.name, dragPayload.color, dragPayload.subjectId, s.id);
+      });
+    } else {
+      addLessonTask(key, null, dragPayload.name, dragPayload.color, dragPayload.subjectId, subjectCalStudentId);
+    }
     dragPayload = null;
     rerender();
   });
