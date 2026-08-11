@@ -138,7 +138,7 @@
   }
   .subject-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
   .subject-card{
-    display:flex; align-items:center; gap:8px;
+    display:flex; flex-direction:column; gap:8px;
     background:#fff;
     border:1px solid var(--rule);
     border-left:8px solid var(--moss);
@@ -152,13 +152,72 @@
   }
   .subject-card:hover{ box-shadow:0 3px 6px rgba(0,0,0,0.12); transform:translateY(-1px); }
   .subject-card.dragging{ opacity:.4; }
+  .subject-card-top{ display:flex; align-items:center; gap:8px; }
   .subject-card .del{
-    margin-left:auto;
+    margin-left:0;
     background:none; border:none; color:var(--ink-soft);
     cursor:pointer; font-size:14px; line-height:1; padding:2px;
   }
   .subject-card .del:hover{ color:var(--cover); }
+  .subject-card .repeat-toggle{
+    margin-left:auto;
+    background:none; border:1px solid var(--rule); border-radius:5px;
+    cursor:pointer; font-size:12px; line-height:1; padding:3px 6px;
+    color:var(--ink-soft);
+  }
+  .subject-card .repeat-toggle:hover{ background:var(--paper-dark); color:var(--ink); }
   .subject-name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .repeat-row{
+    flex-direction:column;
+    gap:8px;
+    border-top:1px dashed var(--rule);
+    padding-top:8px;
+    cursor:default;
+  }
+  .repeat-days{
+    display:flex;
+    gap:4px;
+  }
+  .repeat-day-box{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    font-size:9.5px;
+    font-weight:700;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .repeat-day-box input{ cursor:pointer; }
+  .repeat-fields{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+  }
+  .repeat-fields input[type=date], .repeat-fields select, .repeat-weeks{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    padding:4px 6px;
+    border:1px solid var(--rule);
+    border-radius:5px;
+    background:#fff;
+  }
+  .repeat-weeks-label{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-size:11px;
+    color:var(--ink-soft);
+    font-family:'Inter',sans-serif;
+  }
+  .repeat-weeks{ width:52px; }
+  .repeat-status{
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin:0;
+  }
 
   .add-subject{
     display:flex; flex-direction:column; gap:6px;
@@ -421,6 +480,7 @@
     border:1px solid var(--rule);
     border-radius:8px;
     overflow:hidden;
+    min-width:560px;
   }
   .month-head-cell{
     background:var(--paper-dark);
@@ -435,12 +495,13 @@
   }
   .month-day-cell{
     background:var(--paper);
-    min-height:96px;
+    height:104px;
     padding:6px;
     display:flex;
     flex-direction:column;
-    gap:4px;
+    gap:3px;
     cursor:pointer;
+    overflow:hidden;
   }
   .month-day-cell:hover{ background:var(--paper-dark); }
   .month-day-cell.outside{ opacity:.4; }
@@ -1611,6 +1672,9 @@
     padding:14px 16px 16px;
     box-shadow: var(--paper-shadow), 0 2px 8px rgba(0,0,0,0.06);
   }
+  #subjCalBody{
+    overflow-x:auto;
+  }
   .subject-cal-head{
     display:flex;
     justify-content:space-between;
@@ -1841,7 +1905,9 @@
     <div class="calendar-scroll" id="calendarScroll">
       <div class="calendar" id="weekGrid" style="--cols:5;"></div>
     </div>
-    <div class="month-grid" id="monthGrid" style="display:none;"></div>
+    <div class="calendar-scroll" id="monthScroll" style="display:none;">
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
   </div>
   </div>
 
@@ -2410,26 +2476,110 @@ function renderRoster(){
   });
 }
 
+function scheduleRecurring(item, itemType, dayIndices, startDateIso, weeksCount, slot, studentId){
+  const startDate = parseIsoDate(startDateIso);
+  const {weekOffset: baseOffset} = dateToSlot(startDate);
+  let count = 0;
+  for(let w=0; w<weeksCount; w++){
+    const sunday = getSunday(baseOffset + w);
+    dayIndices.forEach(i=>{
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate()+i);
+      if(d < startDate) return;
+      const {weekOffset, dayIndex} = dateToSlot(d);
+      const key = weekOffset + '|' + dayIndex;
+      const newTask = {
+        id: uid(), name: item.name, color: item.color, slot: slot,
+        note:'', studentId: studentId, done:false,
+        subjectId: itemType==='subject' ? item.id : null,
+        extraId: itemType==='extra' ? item.id : null
+      };
+      if(!state.schedule[key]) state.schedule[key] = [];
+      state.schedule[key].push(newTask);
+      count++;
+    });
+  }
+  saveState();
+  return count;
+}
+
 function renderShelf(listElId, items, dragType, onRemove){
   const list = document.getElementById(listElId);
   list.innerHTML = '';
+  const dayLetters = ['S','M','T','W','T','F','S'];
+  const todayIso = isoDate(new Date());
+
   items.forEach(s=>{
     const card = document.createElement('div');
     card.className = 'subject-card';
     card.style.borderLeftColor = s.color;
     card.draggable = true;
-    card.innerHTML = `<span class="subject-name">${escapeHtml(s.name)}</span><button class="del" title="Remove from shelf">&times;</button>`;
+
+    const slotOptions = ['<option value="">Any time</option>']
+      .concat(timeSlots(state.dayStartHour, state.dayEndHour).map(sl=>`<option value="${sl}">${formatSlotLabel(sl)}</option>`))
+      .join('');
+
+    card.innerHTML = `
+      <div class="subject-card-top">
+        <span class="subject-name">${escapeHtml(s.name)}</span>
+        <button class="repeat-toggle" title="Schedule recurring">&#128257; Repeat</button>
+        <button class="del" title="Remove from shelf">&times;</button>
+      </div>
+      <div class="repeat-row" style="display:none;">
+        <div class="repeat-days">
+          ${dayLetters.map((l,i)=>`<label class="repeat-day-box"><input type="checkbox" value="${i}"/>${l}</label>`).join('')}
+        </div>
+        <div class="repeat-fields">
+          <input type="date" class="repeat-start" value="${todayIso}" />
+          <select class="repeat-slot">${slotOptions}</select>
+          <label class="repeat-weeks-label">for <input type="number" class="repeat-weeks" min="1" max="52" value="12" /> weeks</label>
+        </div>
+        <button class="go repeat-confirm">Schedule recurring</button>
+        <p class="repeat-status"></p>
+      </div>
+    `;
+
     card.addEventListener('dragstart', (e)=>{
       dragPayload = {type:dragType, subjectId:s.id};
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'copy';
     });
     card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
+
     card.querySelector('.del').addEventListener('click', ()=>{
       onRemove(s.id);
       saveState();
       renderShelf(listElId, items.filter(x=>x.id!==s.id), dragType, onRemove);
     });
+
+    const repeatRow = card.querySelector('.repeat-row');
+    card.querySelector('.repeat-toggle').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      repeatRow.style.display = repeatRow.style.display === 'none' ? 'flex' : 'none';
+    });
+    repeatRow.addEventListener('click', (e)=> e.stopPropagation());
+
+    card.querySelector('.repeat-confirm').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const statusEl = card.querySelector('.repeat-status');
+      const checked = Array.from(card.querySelectorAll('.repeat-days input:checked')).map(cb=>parseInt(cb.value,10));
+      if(checked.length === 0){
+        statusEl.textContent = 'Pick at least one day of the week.';
+        return;
+      }
+      const startVal = card.querySelector('.repeat-start').value;
+      if(!startVal){
+        statusEl.textContent = 'Pick a start date.';
+        return;
+      }
+      const slotVal = card.querySelector('.repeat-slot').value || null;
+      const weeksVal = parseInt(card.querySelector('.repeat-weeks').value, 10) || 1;
+      const studentId = state.studentFilter !== 'all' ? state.studentFilter : null;
+      const count = scheduleRecurring(s, dragType, checked, startVal, weeksVal, slotVal, studentId);
+      statusEl.textContent = `Scheduled ${count} time${count===1?'':'s'} across ${weeksVal} week${weeksVal===1?'':'s'}.`;
+      renderCalendar();
+    });
+
     list.appendChild(card);
   });
 }
@@ -2504,15 +2654,15 @@ function renderCalendar(){
   document.getElementById('clearWeek').textContent = 'Clear this ' + state.calendarView;
 
   const calScroll = document.getElementById('calendarScroll');
-  const monthGrid = document.getElementById('monthGrid');
+  const monthScroll = document.getElementById('monthScroll');
 
   if(state.calendarView === 'month'){
     calScroll.style.display = 'none';
-    monthGrid.style.display = '';
+    monthScroll.style.display = '';
     renderMonthGrid();
   } else {
     calScroll.style.display = '';
-    monthGrid.style.display = 'none';
+    monthScroll.style.display = 'none';
     if(state.calendarView === 'day') renderDayCalendar();
     else renderWeekCalendar();
   }
