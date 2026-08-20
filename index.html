@@ -1986,6 +1986,31 @@
     font-size:15px;
     margin:0 0 8px;
   }
+  .daily-notes-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .daily-notes-panel-head h3{ margin:0; }
+  #printDayBtn{
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    padding:6px 12px;
+    font-size:12px;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  #printDayBtn:hover{ background:var(--paper-dark); }
+  .overall-day-note{
+    padding-bottom:12px;
+    margin-bottom:6px;
+    border-bottom:2px solid var(--gold);
+  }
   #dailyNotesList{
     display:flex;
     flex-direction:column;
@@ -2139,6 +2164,7 @@
         <input type="file" id="importIcsInput" accept=".ics,text/calendar" style="display:none;" />
         Import from Google/Apple (.ics)
       </label>
+      <button id="printCalendarBtn">&#128424;&#65039; Print this view</button>
       <button id="clearAllLessonsBtn">Clear all lesson plans</button>
     </div>
     <p class="sync-status" id="syncStatus"></p>
@@ -2179,7 +2205,15 @@
     </div>
 
     <div class="daily-notes-panel" id="dailyNotesPanel" style="display:none;">
-      <h3>Daily notes</h3>
+      <div class="daily-notes-panel-head">
+        <h3>Daily notes</h3>
+        <button id="printDayBtn">&#128424;&#65039; Print this day</button>
+      </div>
+      <div class="daily-note-student overall-day-note">
+        <div class="daily-note-head">Overall for the day</div>
+        <textarea id="overallDayNoteInput" placeholder="Field trips, things that came up, anything worth remembering that isn't tied to one lesson or student..."></textarea>
+        <p class="daily-notes-status" id="overallDayNoteStatus"></p>
+      </div>
       <div id="dailyNotesList"></div>
     </div>
   </div>
@@ -2640,7 +2674,8 @@ let state = {
   redemptions: {}, // studentId -> [{id, name, cost, date}]
   theme: 'notebook',
   fontChoice: 'notebook',
-  dailyNotes: {} // "YYYY-MM-DD" -> note text
+  dailyNotes: {}, // "YYYY-MM-DD" -> { studentId: note text }
+  overallDayNotes: {} // "YYYY-MM-DD" -> note text (whole-day, not tied to one student)
 };
 
 let selectedColor = COLORS[0].hex;
@@ -3192,6 +3227,20 @@ function renderCalendar(){
 }
 
 function renderDailyNotes(){
+  const overallInput = document.getElementById('overallDayNoteInput');
+  const overallStatus = document.getElementById('overallDayNoteStatus');
+  overallInput.value = state.overallDayNotes[state.currentDate] || '';
+  overallStatus.textContent = '';
+  overallInput.onchange = ()=>{
+    const val = overallInput.value.trim();
+    if(val){ state.overallDayNotes[state.currentDate] = overallInput.value; }
+    else{ delete state.overallDayNotes[state.currentDate]; }
+    saveState();
+    overallStatus.textContent = 'Saved.';
+  };
+
+  document.getElementById('printDayBtn').onclick = ()=> printDailyRecord(state.currentDate);
+
   const list = document.getElementById('dailyNotesList');
   list.innerHTML = '';
   const dateNotes = state.dailyNotes[state.currentDate] || {};
@@ -3226,6 +3275,52 @@ function renderDailyNotes(){
     });
     list.appendChild(wrap);
   });
+}
+
+function printDailyRecord(dateIso){
+  const printArea = document.getElementById('printArea');
+  const dateObj = parseIsoDate(dateIso);
+  const dateLabel = dateObj.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  const holiday = getHoliday(dateObj);
+
+  let html = `<div class="print-title">${escapeHtml(state.title || 'Homeschool Planner')}</div>`;
+  html += `<div class="print-sub">${escapeHtml(dateLabel)}${holiday ? ' — ' + escapeHtml(holiday.name) : ''}</div>`;
+
+  const {weekOffset, dayIndex} = dateToSlot(dateObj);
+  const key = weekOffset + '|' + dayIndex;
+  const tasks = (state.schedule[key] || []).slice().sort((a,b)=>{
+    const as = a.slot || '';
+    const bs = b.slot || '';
+    return as.localeCompare(bs);
+  });
+
+  html += `<div class="print-student"><h4>Lesson plan</h4>`;
+  if(tasks.length === 0){
+    html += `<p class="print-stats">Nothing scheduled for this day.</p>`;
+  } else {
+    html += `<table class="print-table"><thead><tr><th>Time</th><th>Item</th><th>Student</th><th>Done</th></tr></thead><tbody>`;
+    tasks.forEach(t=>{
+      const student = state.students.find(s=>s.id===t.studentId);
+      const timeLabel = t.slot ? formatSlotLabel(t.slot) : 'Any time';
+      html += `<tr><td>${escapeHtml(timeLabel)}</td><td>${escapeHtml(t.name)}</td><td>${student?escapeHtml(student.name):'—'}</td><td>${t.done?'Yes':'No'}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+
+  const overallNote = state.overallDayNotes[dateIso];
+  if(overallNote){
+    html += `<div class="print-student"><h4>Overall for the day</h4><p class="print-stats">${escapeHtml(overallNote).replace(/\n/g,'<br>')}</p></div>`;
+  }
+
+  const dateNotes = state.dailyNotes[dateIso] || {};
+  state.students.forEach(s=>{
+    if(!dateNotes[s.id]) return;
+    html += `<div class="print-student"><h4>${escapeHtml(s.name)}</h4><p class="print-stats">${escapeHtml(dateNotes[s.id]).replace(/\n/g,'<br>')}</p></div>`;
+  });
+
+  printArea.innerHTML = html;
+  window.print();
 }
 
 function renderWeekCalendar(){
@@ -5805,6 +5900,52 @@ document.getElementById('exportIcsBtn').addEventListener('click', ()=>{
   const ics = buildICS(events, state.title || 'Homeschool Planner');
   downloadICS(ics, 'homeschool-planner-' + state.calendarView + '.ics');
   statusEl.textContent = `Exported ${events.length} event${events.length===1?'':'s'} — open the downloaded file, or import/share it in Google Calendar, Apple Calendar, or Outlook.`;
+});
+
+document.getElementById('printCalendarBtn').addEventListener('click', ()=>{
+  const statusEl = document.getElementById('syncStatus');
+  const events = collectEventsForExport();
+  if(events.length === 0){
+    statusEl.textContent = 'Nothing scheduled in this view to print.';
+    return;
+  }
+  events.sort((a,b)=> a.start - b.start);
+
+  const byDay = {};
+  events.forEach(ev=>{
+    const dIso = isoDate(ev.start);
+    if(!byDay[dIso]) byDay[dIso] = [];
+    byDay[dIso].push(ev);
+  });
+
+  let rangeLabel = '';
+  if(state.calendarView === 'day'){
+    rangeLabel = parseIsoDate(state.currentDate).toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  } else if(state.calendarView === 'month'){
+    rangeLabel = parseIsoDate(state.currentDate).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  } else {
+    const sunday = getSunday(state.weekOffset);
+    rangeLabel = fmtRange(sunday, 7);
+  }
+
+  let html = `<div class="print-title">${escapeHtml(state.title || 'Homeschool Planner')} — Lesson Plan Calendar</div>`;
+  html += `<div class="print-sub">${escapeHtml(rangeLabel)} &middot; Printed ${new Date().toLocaleDateString()}</div>`;
+
+  Object.keys(byDay).sort().forEach(dIso=>{
+    const dObj = parseIsoDate(dIso);
+    const holiday = getHoliday(dObj);
+    const dayLabel = dObj.toLocaleDateString(undefined,{weekday:'long', month:'short', day:'numeric'});
+    html += `<div class="print-student"><h4>${escapeHtml(dayLabel)}${holiday?' — '+escapeHtml(holiday.name):''}</h4>`;
+    html += `<table class="print-table"><thead><tr><th>Time</th><th>Item</th></tr></thead><tbody>`;
+    byDay[dIso].forEach(ev=>{
+      const timeLabel = ev.allDay ? 'Any time' : ev.start.toLocaleTimeString(undefined,{hour:'numeric', minute:'2-digit'});
+      html += `<tr><td>${escapeHtml(timeLabel)}</td><td>${escapeHtml(ev.summary)}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
 });
 
 document.getElementById('clearAllLessonsBtn').addEventListener('click', function(){
