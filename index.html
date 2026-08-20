@@ -1986,9 +1986,30 @@
     font-size:15px;
     margin:0 0 8px;
   }
-  .daily-notes-panel textarea{
+  #dailyNotesList{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .daily-note-student{
+    padding-top:10px;
+    border-top:1px dashed var(--rule);
+  }
+  .daily-note-student:first-child{
+    padding-top:0;
+    border-top:none;
+  }
+  .daily-note-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+    font-weight:600;
+    font-size:13px;
+  }
+  .daily-note-student textarea{
     width:100%;
-    min-height:90px;
+    min-height:70px;
     font-family:'Inter',sans-serif;
     font-size:13px;
     padding:10px 12px;
@@ -2159,8 +2180,7 @@
 
     <div class="daily-notes-panel" id="dailyNotesPanel" style="display:none;">
       <h3>Daily notes</h3>
-      <textarea id="dailyNotesInput" placeholder="Milestones, observations, anything worth remembering about today..."></textarea>
-      <p class="daily-notes-status" id="dailyNotesStatus"></p>
+      <div id="dailyNotesList"></div>
     </div>
   </div>
   </div>
@@ -2372,7 +2392,8 @@ const THEME_PRESETS = {
   ocean: {label:'Ocean', '--paper':'#F2F8FA','--paper-dark':'#E1EEF2','--ink':'#1F3439','--ink-soft':'#5C7A82','--rule':'#BFDCE3','--cover':'#2E6E8E','--cover-dark':'#1F4E68','--gold':'#4FA3B5','--moss':'#3E7C6B','--dusty':'#4A7FA6','--plum':'#5C6E9E'},
   blush: {label:'Blush', '--paper':'#FBF2F2','--paper-dark':'#F5E2E2','--ink':'#3A2A2C','--ink-soft':'#8A6A6D','--rule':'#EBC9CD','--cover':'#C9527A','--cover-dark':'#9C3A5C','--gold':'#D99B6C','--moss':'#8A9A6B','--dusty':'#B5798F','--plum':'#9A5C7A'},
   forest: {label:'Forest', '--paper':'#F3F5EE','--paper-dark':'#E4E9D8','--ink':'#26301F','--ink-soft':'#5E6B4F','--rule':'#C7D3B4','--cover':'#5C4A2E','--cover-dark':'#3F3220','--gold':'#A98B3E','--moss':'#3E6B44','--dusty':'#557A6B','--plum':'#6B5C46'},
-  slate: {label:'Slate', '--paper':'#F3F4F6','--paper-dark':'#E4E7EB','--ink':'#22262B','--ink-soft':'#5C6570','--rule':'#CBD2D9','--cover':'#3E4C63','--cover-dark':'#2A3547','--gold':'#8A93A6','--moss':'#4A6B6B','--dusty':'#46617A','--plum':'#5C5C7A'}
+  slate: {label:'Slate', '--paper':'#F3F4F6','--paper-dark':'#E4E7EB','--ink':'#22262B','--ink-soft':'#5C6570','--rule':'#CBD2D9','--cover':'#3E4C63','--cover-dark':'#2A3547','--gold':'#8A93A6','--moss':'#4A6B6B','--dusty':'#46617A','--plum':'#5C5C7A'},
+  mono: {label:'Black & White', '--paper':'#FFFFFF','--paper-dark':'#EDEDED','--ink':'#111111','--ink-soft':'#555555','--rule':'#BBBBBB','--cover':'#000000','--cover-dark':'#000000','--gold':'#444444','--moss':'#222222','--dusty':'#333333','--plum':'#555555'}
 };
 
 const FONT_PRESETS = {
@@ -2632,6 +2653,45 @@ let expandedTaskIds = new Set(); // task ids currently expanded to show lesson n
 
 function uid(){ return 't' + Math.random().toString(36).slice(2,10); }
 
+function rolloverMissedLessons(){
+  const todayIso = isoDate(new Date());
+  const todayDate = parseIsoDate(todayIso);
+  let movedCount = 0;
+
+  Object.keys(state.schedule).forEach(key=>{
+    const tasks = state.schedule[key];
+    if(!tasks || tasks.length === 0) return;
+
+    for(let i = tasks.length - 1; i >= 0; i--){
+      const t = tasks[i];
+      if(t.done) continue;
+      if(!t.subjectId) continue; // only roll actual subject-linked lessons/work, not extracurriculars
+
+      const parts = key.split('|').map(Number);
+      const sunday = getSunday(parts[0]);
+      const taskDate = new Date(sunday);
+      taskDate.setDate(sunday.getDate() + parts[1]);
+      if(taskDate >= todayDate) continue; // not overdue yet
+
+      const newDate = new Date(taskDate);
+      let guard = 0;
+      do{
+        newDate.setDate(newDate.getDate()+1);
+        guard++;
+      } while(guard < 400 && (newDate.getDay()===0 || newDate.getDay()===6 || getHoliday(newDate) || newDate < todayDate));
+
+      const {weekOffset, dayIndex} = dateToSlot(newDate);
+      const newKey = weekOffset + '|' + dayIndex;
+      tasks.splice(i, 1);
+      if(!state.schedule[newKey]) state.schedule[newKey] = [];
+      state.schedule[newKey].push(t);
+      movedCount++;
+    }
+  });
+
+  return movedCount;
+}
+
 async function loadState(){
   await window.fbReadyPromise;
 
@@ -2665,6 +2725,11 @@ async function loadState(){
         console.error('Initial Firebase save failed', e);
       }
     }
+  }
+
+  const rolled = rolloverMissedLessons();
+  if(rolled > 0){
+    try{ await saveState(); }catch(e){ console.error('Rollover save failed', e); }
   }
 
   updateFooterNote(fbResult.ok);
@@ -3080,6 +3145,21 @@ function getHoliday(dateObj){
   return holidays.find(h => h.date === iso) || null;
 }
 
+function getEligibleDates(startDate, endDate, dayIndices, skipHolidays){
+  const dates = [];
+  let cursor = new Date(startDate);
+  let guard = 0;
+  while(cursor <= endDate && guard < 3000){
+    guard++;
+    if(dayIndices.includes(cursor.getDay())){
+      const holiday = skipHolidays ? getHoliday(cursor) : null;
+      if(!holiday) dates.push(new Date(cursor));
+    }
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return dates;
+}
+
 function renderCalendar(){
   document.querySelectorAll('.view-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.view === state.calendarView);
@@ -3112,17 +3192,40 @@ function renderCalendar(){
 }
 
 function renderDailyNotes(){
-  const input = document.getElementById('dailyNotesInput');
-  const status = document.getElementById('dailyNotesStatus');
-  input.value = state.dailyNotes[state.currentDate] || '';
-  status.textContent = '';
-  input.onchange = ()=>{
-    const val = input.value.trim();
-    if(val){ state.dailyNotes[state.currentDate] = input.value; }
-    else{ delete state.dailyNotes[state.currentDate]; }
-    saveState();
-    status.textContent = 'Saved.';
-  };
+  const list = document.getElementById('dailyNotesList');
+  list.innerHTML = '';
+  const dateNotes = state.dailyNotes[state.currentDate] || {};
+
+  if(state.students.length === 0){
+    list.innerHTML = '<p class="subject-empty" style="padding:6px 0;">Add a student on the Calendar page to start keeping daily notes.</p>';
+    return;
+  }
+
+  state.students.forEach(s=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'daily-note-student';
+    wrap.innerHTML = `
+      <div class="daily-note-head">${avatarMarkup(s, 22)}<span>${escapeHtml(s.name)}</span></div>
+      <textarea placeholder="Milestones, observations, anything worth remembering about ${escapeHtml(s.name)} today...">${escapeHtml(dateNotes[s.id] || '')}</textarea>
+      <p class="daily-notes-status"></p>
+    `;
+    const textarea = wrap.querySelector('textarea');
+    const status = wrap.querySelector('.daily-notes-status');
+    textarea.addEventListener('change', ()=>{
+      const val = textarea.value.trim();
+      if(!state.dailyNotes[state.currentDate]) state.dailyNotes[state.currentDate] = {};
+      if(val){ state.dailyNotes[state.currentDate][s.id] = textarea.value; }
+      else{
+        delete state.dailyNotes[state.currentDate][s.id];
+        if(Object.keys(state.dailyNotes[state.currentDate]).length === 0){
+          delete state.dailyNotes[state.currentDate];
+        }
+      }
+      saveState();
+      status.textContent = 'Saved.';
+    });
+    list.appendChild(wrap);
+  });
 }
 
 function renderWeekCalendar(){
@@ -4973,10 +5076,12 @@ function renderSubjectPage(){
           <div class="repeat-days" id="autoScheduleDays"></div>
           <div class="repeat-fields">
             <input type="date" id="autoScheduleStart" />
+            <span style="font-size:11px; color:var(--ink-soft);">to</span>
+            <input type="date" id="autoScheduleEnd" />
             <label class="repeat-weeks-label"><input type="checkbox" id="autoScheduleSkipHolidays" checked /> Skip holidays</label>
           </div>
           <button class="go" id="autoScheduleBtn">Auto-schedule all their lessons</button>
-          <p class="hint" id="autoScheduleStatus">Picks up that student's lessons in order and lays them out one per checked day, starting from the date above, until every lesson has a spot.</p>
+          <p class="hint" id="autoScheduleStatus">With an end date, lessons are spread evenly across the whole term (e.g. 180 school days) so pacing stays even — leave it blank to just fill checked days back-to-back starting from the start date until every lesson has a spot.</p>
         </div>
 
         <div class="multi-assign-panel" style="border-top-color:${subj.color}">
@@ -5149,10 +5254,38 @@ function renderSubjectPage(){
       statusEl.textContent = 'Pick a start date.';
       return;
     }
+    const endVal = document.getElementById('autoScheduleEnd').value;
     const skipHolidays = document.getElementById('autoScheduleSkipHolidays').checked;
     const lessonsToPlace = (subj.lessons || []).filter(l => l.studentId === studentId || !l.studentId);
     if(lessonsToPlace.length === 0){
       statusEl.textContent = 'No lessons in the bank for that student yet.';
+      return;
+    }
+
+    if(endVal){
+      const endDate = parseIsoDate(endVal);
+      const startDate = parseIsoDate(startVal);
+      if(endDate < startDate){
+        statusEl.textContent = 'End date needs to be after the start date.';
+        return;
+      }
+      const eligibleDates = getEligibleDates(startDate, endDate, checkedDays, skipHolidays);
+      if(eligibleDates.length === 0){
+        statusEl.textContent = 'No eligible school days found in that range — check your days and dates.';
+        return;
+      }
+      const n = lessonsToPlace.length;
+      const m = eligibleDates.length;
+      lessonsToPlace.forEach((lesson, i)=>{
+        const idx = Math.min(m-1, Math.floor(i * m / n));
+        const d = eligibleDates[idx];
+        const {weekOffset, dayIndex} = dateToSlot(d);
+        const key = weekOffset + '|' + dayIndex;
+        addLessonTask(key, null, lesson.text, subj.color, subj.id, studentId);
+      });
+      const perDay = n > m ? Math.ceil(n/m) : 1;
+      statusEl.textContent = `Evenly paced ${n} lesson${n===1?'':'s'} across ${m} school day${m===1?'':'s'} (${startVal} through ${endVal})` + (n>m ? `, about ${perDay} per day on the busiest days` : '') + '.';
+      renderCalendar();
       return;
     }
 
@@ -5745,6 +5878,34 @@ document.getElementById('importIcsInput').addEventListener('change', ()=>{
   reader.readAsText(file);
   input.value = '';
 });
+
+let refreshingFromServer = false;
+
+async function refreshFromServer(){
+  if(refreshingFromServer) return;
+  if(!window.fbLoadState) return;
+  refreshingFromServer = true;
+  try{
+    const result = await window.fbLoadState();
+    if(result && result.ok && result.data){
+      state = Object.assign(state, result.data);
+      const rolled = rolloverMissedLessons();
+      if(rolled > 0){
+        try{ await saveState(); }catch(e){ console.error('Rollover save failed', e); }
+      }
+      render();
+    }
+  }catch(e){
+    console.error('Background refresh failed', e);
+  }
+  refreshingFromServer = false;
+}
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') refreshFromServer();
+});
+window.addEventListener('focus', refreshFromServer);
+window.addEventListener('pageshow', refreshFromServer);
 
 loadState();
 </script>
