@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Homeschool Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#FBF7EE;
@@ -21,6 +21,9 @@
     --plum:#7A5C7A;
     --paper-shadow: 0 1px 0 rgba(0,0,0,0.05);
   }
+  body.font-classic *{ font-family: Georgia, 'Times New Roman', serif !important; }
+  body.font-modern *{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; }
+  body.font-playful *{ font-family: 'Quicksand', 'Trebuchet MS', sans-serif !important; }
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -168,6 +171,13 @@
   .subject-card .repeat-toggle:hover{ background:var(--paper-dark); color:var(--ink); }
   .subject-name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
+  .chore-shelf-top .repeat-toggle{
+    margin-left:auto;
+    background:none; border:1px solid var(--rule); border-radius:5px;
+    cursor:pointer; font-size:12px; line-height:1; padding:3px 6px;
+    color:var(--ink-soft);
+  }
+  .chore-shelf-top .repeat-toggle:hover{ background:var(--paper-dark); color:var(--ink); }
   .repeat-row{
     flex-direction:column;
     gap:8px;
@@ -1861,6 +1871,182 @@
     line-height:1;
   }
   .scc-chip-del:hover{ opacity:1; }
+
+  /* ---- Mobile friendliness ---- */
+  @media (max-width:640px){
+    .wrap{ padding:14px 10px 40px; }
+    .cover{ padding:18px 16px 16px; }
+    .cover h1, .title-input{ font-size:24px; margin-left:0; }
+    .cover:before{ display:none; }
+    .cover-row{ flex-direction:column; align-items:flex-start; gap:12px; }
+    .subject-nav{ padding:8px 10px; }
+    .nav-pill{ padding:6px 10px; font-size:11.5px; }
+    .toolbar{ flex-direction:column; align-items:stretch; }
+    .toolbar-right{ justify-content:flex-start; }
+    .sync-actions{ flex-direction:column; align-items:stretch; }
+    .roster-row{ gap:6px; }
+    button, .go, .view-btn, .period-btn, .lesson-filter-chip{ min-height:34px; }
+    .avatar-slot{ min-width:22px; }
+  }
+
+  /* ---- Touch drag support ---- */
+  [draggable="true"]{
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .subject-card, .chore-shelf-card, .reward-card, .lesson-chip{
+    position:relative;
+  }
+  .subject-card::after, .chore-shelf-card::after{
+    content:'\22ee\22ee';
+    position:absolute;
+    top:8px; right:8px;
+    font-size:11px;
+    line-height:0.5;
+    color:var(--rule);
+    letter-spacing:1px;
+    pointer-events:none;
+  }
+  @media (hover:hover){
+    .subject-card::after, .chore-shelf-card::after{ display:none; }
+  }
+
+  /* ---- Customize panel ---- */
+  .customize-btn{
+    background:rgba(255,255,255,0.14);
+    border:1px solid rgba(255,255,255,0.35);
+    color:#FBF3EA;
+    border-radius:6px;
+    padding:6px 12px;
+    font-size:12px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .customize-btn:hover{ background:rgba(255,255,255,0.25); }
+  .customize-panel{
+    background: var(--paper);
+    border-radius:8px;
+    padding:16px 18px;
+    box-shadow: var(--paper-shadow), 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom:18px;
+  }
+  .customize-panel h3{
+    font-family:'Kalam',cursive;
+    font-size:16px;
+    margin:0 0 12px;
+  }
+  .customize-section{ margin-bottom:14px; }
+  .customize-section:last-child{ margin-bottom:0; }
+  .customize-label{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+    display:block;
+  }
+  .theme-swatch-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .theme-swatch{
+    width:46px; height:46px;
+    border-radius:8px;
+    cursor:pointer;
+    border:2.5px solid transparent;
+    display:flex;
+    overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  }
+  .theme-swatch span{ flex:1; }
+  .theme-swatch.selected{ border-color:var(--ink); }
+  .font-option-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .font-option-btn{
+    background:#fff;
+    border:1.5px solid var(--rule);
+    border-radius:16px;
+    padding:7px 14px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .font-option-btn.selected{ border-color:var(--ink); background:var(--paper-dark); }
+
+  /* ---- Daily notes ---- */
+  .daily-notes-panel{
+    background: var(--paper);
+    border-radius:8px;
+    border-top:4px solid var(--gold);
+    padding:14px 16px 16px;
+    box-shadow: var(--paper-shadow), 0 2px 8px rgba(0,0,0,0.06);
+    margin-top:14px;
+  }
+  .daily-notes-panel h3{
+    font-family:'Kalam',cursive;
+    font-size:15px;
+    margin:0 0 8px;
+  }
+  .daily-notes-panel textarea{
+    width:100%;
+    min-height:90px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    padding:10px 12px;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    background:#fff;
+    resize:vertical;
+  }
+  .daily-notes-status{
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin:6px 0 0;
+  }
+
+  /* ---- Move-to-date (task expand) ---- */
+  .task-move-row{
+    display:flex;
+    gap:5px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-top:2px;
+  }
+  .task-move-row input[type=date]{
+    font-family:'Space Mono',monospace;
+    font-size:10.5px;
+    padding:4px 5px;
+    border:1px solid var(--rule);
+    border-radius:5px;
+  }
+  .task-move-row button{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:5px;
+    padding:4px 9px;
+    font-size:10.5px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+
+  /* ---- Print ---- */
+  #printArea{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{
+      display:block;
+      position:absolute; left:0; top:0; width:100%;
+      background:#fff; color:#000; padding:20px;
+    }
+    .print-title{ font-size:20px; font-weight:700; margin-bottom:4px; }
+    .print-sub{ font-size:12px; color:#444; margin-bottom:16px; }
+    .print-student{ margin-bottom:22px; page-break-inside:avoid; }
+    .print-student h4{ font-size:15px; margin:0 0 6px; border-bottom:1px solid #999; padding-bottom:4px; }
+    .print-table{ width:100%; border-collapse:collapse; font-size:11.5px; }
+    .print-table th, .print-table td{ border:1px solid #ccc; padding:4px 8px; text-align:left; }
+    .print-stats{ font-size:12px; margin-top:6px; color:#333; }
+  }
 </style>
 </head>
 <body>
@@ -1877,10 +2063,23 @@
         <span class="week-label" id="weekLabel">Week of —</span>
         <button id="nextWeek" aria-label="Next week">&#8250;</button>
       </div>
+      <button class="customize-btn" id="customizeToggle">&#127912; Customize</button>
     </div>
   </div>
 
   <nav class="subject-nav" id="subjectNav"></nav>
+
+  <div class="customize-panel" id="customizePanel" style="display:none;">
+    <h3>Customize your planner</h3>
+    <div class="customize-section">
+      <span class="customize-label">Theme</span>
+      <div class="theme-swatch-row" id="themeSwatchRow"></div>
+    </div>
+    <div class="customize-section">
+      <span class="customize-label">Font style</span>
+      <div class="font-option-row" id="fontOptionRow"></div>
+    </div>
+  </div>
 
   <div id="calendarSection">
   <div class="roster">
@@ -1919,6 +2118,7 @@
         <input type="file" id="importIcsInput" accept=".ics,text/calendar" style="display:none;" />
         Import from Google/Apple (.ics)
       </label>
+      <button id="clearAllLessonsBtn">Clear all lesson plans</button>
     </div>
     <p class="sync-status" id="syncStatus"></p>
   </div>
@@ -1956,6 +2156,12 @@
     <div class="calendar-scroll" id="monthScroll" style="display:none;">
       <div class="month-grid" id="monthGrid"></div>
     </div>
+
+    <div class="daily-notes-panel" id="dailyNotesPanel" style="display:none;">
+      <h3>Daily notes</h3>
+      <textarea id="dailyNotesInput" placeholder="Milestones, observations, anything worth remembering about today..."></textarea>
+      <p class="daily-notes-status" id="dailyNotesStatus"></p>
+    </div>
   </div>
   </div>
 
@@ -1969,6 +2175,8 @@
 
   <p class="footer-note" id="footerNote">Syncing across your devices…</p>
 </div>
+
+<div id="printArea"></div>
 
 <script>
   window.fbReadyResolve = null;
@@ -2026,6 +2234,94 @@
 </script>
 
 <script>
+// --- Touch-drag bridge: makes the existing HTML5 drag/drop system work on
+// touchscreens. Uses a long-press (350ms, held still) to start a drag, so
+// normal scrolling and quick taps are never hijacked. Dispatches the same
+// dragstart/dragover/dragleave/drop/dragend events the rest of the app
+// already listens for, so no other code needs to change.
+(function(){
+  const LP_DELAY = 350;
+  const MOVE_CANCEL_PX = 10;
+  let lp = { timer:null, el:null, active:false, startX:0, startY:0, target:null };
+
+  function clearLP(){
+    if(lp.timer){ clearTimeout(lp.timer); lp.timer = null; }
+  }
+  function resetLP(){
+    clearLP();
+    lp.el = null;
+    lp.active = false;
+    lp.target = null;
+  }
+
+  document.addEventListener('touchstart', function(e){
+    const el = e.target.closest && e.target.closest('[draggable="true"]');
+    if(!el) return;
+    if(e.target.closest('button, select, input, textarea, a, label')) return;
+    const touch = e.touches[0];
+    lp.el = el;
+    lp.active = false;
+    lp.startX = touch.clientX;
+    lp.startY = touch.clientY;
+    lp.target = null;
+    clearLP();
+    lp.timer = setTimeout(function(){
+      lp.active = true;
+      if(navigator.vibrate) navigator.vibrate(12);
+      el.dispatchEvent(new Event('dragstart', {bubbles:true}));
+    }, LP_DELAY);
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if(!lp.el) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - lp.startX;
+    const dy = touch.clientY - lp.startY;
+    if(!lp.active){
+      if(Math.hypot(dx,dy) > MOVE_CANCEL_PX){
+        resetLP();
+      }
+      return;
+    }
+    e.preventDefault();
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if(lp.target && lp.target !== el){
+      lp.target.dispatchEvent(new Event('dragleave', {bubbles:true}));
+    }
+    if(el){
+      el.dispatchEvent(new Event('dragover', {bubbles:true, cancelable:true}));
+    }
+    lp.target = el;
+  }, {passive:false});
+
+  document.addEventListener('touchend', function(e){
+    const wasActive = lp.active;
+    const el = lp.el;
+    clearLP();
+    if(wasActive && el){
+      const touch = e.changedTouches[0];
+      const dropEl = document.elementFromPoint(touch.clientX, touch.clientY);
+      if(dropEl){
+        dropEl.dispatchEvent(new Event('drop', {bubbles:true, cancelable:true}));
+      }
+      el.dispatchEvent(new Event('dragend', {bubbles:true}));
+    }
+    resetLP();
+  }, {passive:true});
+
+  document.addEventListener('touchcancel', function(){
+    const wasActive = lp.active;
+    const el = lp.el;
+    clearLP();
+    if(wasActive && el){
+      el.dispatchEvent(new Event('dragend', {bubbles:true}));
+    }
+    resetLP();
+  }, {passive:true});
+})();
+</script>
+
+<script>
 const COLORS = [
   {name:'moss', hex:'#5C7A5C'},
   {name:'gold', hex:'#D9A441'},
@@ -2070,6 +2366,21 @@ const AVATAR_ACCESSORIES = [
 ];
 const AVATAR_BADGES = ['⚽','🏀','🏈','⚾','🎾','🏐','🏸','🥋','🏓','⛳','🏊','🚴','🎸','🎨','📚','🎮','🦖','🦄','🌟','🎵','🐶','🐱','🚀','🧩','🍕','🌈','⭐','🔥'];
 const AVATAR_BACKGROUNDS = ['#F1EAD9','#EAF2E9','#FDF1DC','#E9F0F5','#F3E9F0','#FBEAE3','#E4ECF5','#FFF7DE','#E6F5F0','#FDEBEB'];
+
+const THEME_PRESETS = {
+  notebook: {label:'Notebook', '--paper':'#FBF7EE','--paper-dark':'#F1EAD9','--ink':'#2B2A28','--ink-soft':'#6b675e','--rule':'#C9D6DE','--cover':'#B5482F','--cover-dark':'#8f3823','--gold':'#D9A441','--moss':'#5C7A5C','--dusty':'#5B7A99','--plum':'#7A5C7A'},
+  ocean: {label:'Ocean', '--paper':'#F2F8FA','--paper-dark':'#E1EEF2','--ink':'#1F3439','--ink-soft':'#5C7A82','--rule':'#BFDCE3','--cover':'#2E6E8E','--cover-dark':'#1F4E68','--gold':'#4FA3B5','--moss':'#3E7C6B','--dusty':'#4A7FA6','--plum':'#5C6E9E'},
+  blush: {label:'Blush', '--paper':'#FBF2F2','--paper-dark':'#F5E2E2','--ink':'#3A2A2C','--ink-soft':'#8A6A6D','--rule':'#EBC9CD','--cover':'#C9527A','--cover-dark':'#9C3A5C','--gold':'#D99B6C','--moss':'#8A9A6B','--dusty':'#B5798F','--plum':'#9A5C7A'},
+  forest: {label:'Forest', '--paper':'#F3F5EE','--paper-dark':'#E4E9D8','--ink':'#26301F','--ink-soft':'#5E6B4F','--rule':'#C7D3B4','--cover':'#5C4A2E','--cover-dark':'#3F3220','--gold':'#A98B3E','--moss':'#3E6B44','--dusty':'#557A6B','--plum':'#6B5C46'},
+  slate: {label:'Slate', '--paper':'#F3F4F6','--paper-dark':'#E4E7EB','--ink':'#22262B','--ink-soft':'#5C6570','--rule':'#CBD2D9','--cover':'#3E4C63','--cover-dark':'#2A3547','--gold':'#8A93A6','--moss':'#4A6B6B','--dusty':'#46617A','--plum':'#5C5C7A'}
+};
+
+const FONT_PRESETS = {
+  notebook: {label:'Notebook', bodyClass:''},
+  classic: {label:'Classic', bodyClass:'font-classic'},
+  modern: {label:'Modern', bodyClass:'font-modern'},
+  playful: {label:'Playful', bodyClass:'font-playful'}
+};
 
 function defaultAvatar(){
   return {
@@ -2305,7 +2616,10 @@ let state = {
   ],
   studentGoals: {}, // studentId -> rewardId
   pointsRedeemed: {}, // studentId -> total points spent on redeemed rewards
-  redemptions: {} // studentId -> [{id, name, cost, date}]
+  redemptions: {}, // studentId -> [{id, name, cost, date}]
+  theme: 'notebook',
+  fontChoice: 'notebook',
+  dailyNotes: {} // "YYYY-MM-DD" -> note text
 };
 
 let selectedColor = COLORS[0].hex;
@@ -2570,10 +2884,17 @@ function renderShelf(listElId, items, dragType, onRemove){
     card.innerHTML = `
       <div class="subject-card-top">
         <span class="subject-name">${escapeHtml(s.name)}</span>
-        <button class="repeat-toggle" title="Schedule recurring">&#128257; Repeat</button>
+        <button class="repeat-toggle" title="Schedule onto a day">&#128197; Schedule</button>
         <button class="del" title="Remove from shelf">&times;</button>
       </div>
       <div class="repeat-row" style="display:none;">
+        <span class="customize-label" style="margin-bottom:0;">Add once</span>
+        <div class="repeat-fields">
+          <input type="date" class="once-date" value="${todayIso}" />
+          <select class="once-slot">${slotOptions}</select>
+          <button class="go once-confirm">Add to that day</button>
+        </div>
+        <span class="customize-label" style="margin-bottom:0;">Or repeat weekly</span>
         <div class="repeat-days">
           ${dayLetters.map((l,i)=>`<label class="repeat-day-box"><input type="checkbox" value="${i}"/>${l}</label>`).join('')}
         </div>
@@ -2590,7 +2911,7 @@ function renderShelf(listElId, items, dragType, onRemove){
     card.addEventListener('dragstart', (e)=>{
       dragPayload = {type:dragType, subjectId:s.id};
       card.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'copy';
+      if(e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
     });
     card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
 
@@ -2606,6 +2927,32 @@ function renderShelf(listElId, items, dragType, onRemove){
       repeatRow.style.display = repeatRow.style.display === 'none' ? 'flex' : 'none';
     });
     repeatRow.addEventListener('click', (e)=> e.stopPropagation());
+
+    card.querySelector('.once-confirm').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const statusEl = card.querySelector('.repeat-status');
+      const dateVal = card.querySelector('.once-date').value;
+      if(!dateVal){
+        statusEl.textContent = 'Pick a date.';
+        return;
+      }
+      const slotVal = card.querySelector('.once-slot').value || null;
+      const studentId = state.studentFilter !== 'all' ? state.studentFilter : null;
+      const date = parseIsoDate(dateVal);
+      const {weekOffset, dayIndex} = dateToSlot(date);
+      const key = weekOffset + '|' + dayIndex;
+      const newTask = {
+        id: uid(), name: s.name, color: s.color, slot: slotVal,
+        note:'', studentId: studentId, done:false,
+        subjectId: dragType==='subject' ? s.id : null,
+        extraId: dragType==='extra' ? s.id : null
+      };
+      if(!state.schedule[key]) state.schedule[key] = [];
+      state.schedule[key].push(newTask);
+      saveState();
+      statusEl.textContent = `Added to ${date.toLocaleDateString(undefined,{month:'short',day:'numeric'})}.`;
+      renderCalendar();
+    });
 
     card.querySelector('.repeat-confirm').addEventListener('click', (e)=>{
       e.stopPropagation();
@@ -2743,17 +3090,39 @@ function renderCalendar(){
 
   const calScroll = document.getElementById('calendarScroll');
   const monthScroll = document.getElementById('monthScroll');
+  const notesPanel = document.getElementById('dailyNotesPanel');
 
   if(state.calendarView === 'month'){
     calScroll.style.display = 'none';
     monthScroll.style.display = '';
+    notesPanel.style.display = 'none';
     renderMonthGrid();
   } else {
     calScroll.style.display = '';
     monthScroll.style.display = 'none';
-    if(state.calendarView === 'day') renderDayCalendar();
-    else renderWeekCalendar();
+    if(state.calendarView === 'day'){
+      notesPanel.style.display = '';
+      renderDailyNotes();
+      renderDayCalendar();
+    } else {
+      notesPanel.style.display = 'none';
+      renderWeekCalendar();
+    }
   }
+}
+
+function renderDailyNotes(){
+  const input = document.getElementById('dailyNotesInput');
+  const status = document.getElementById('dailyNotesStatus');
+  input.value = state.dailyNotes[state.currentDate] || '';
+  status.textContent = '';
+  input.onchange = ()=>{
+    const val = input.value.trim();
+    if(val){ state.dailyNotes[state.currentDate] = input.value; }
+    else{ delete state.dailyNotes[state.currentDate]; }
+    saveState();
+    status.textContent = 'Saved.';
+  };
 }
 
 function renderWeekCalendar(){
@@ -2951,6 +3320,14 @@ function buildCell(key, slot, isHalf){
   return cell;
 }
 
+function keyToIsoDate(key){
+  const parts = key.split('|').map(Number);
+  const sunday = getSunday(parts[0]);
+  const d = new Date(sunday);
+  d.setDate(sunday.getDate() + parts[1]);
+  return isoDate(d);
+}
+
 function renderTaskCard(t, key){
   const card = document.createElement('div');
   const isExpanded = expandedTaskIds.has(t.id);
@@ -2979,6 +3356,10 @@ function renderTaskCard(t, key){
     <div class="task-details">
       <span class="lesson-label">Lesson / notes for this day</span>
       <textarea class="task-note" placeholder="What's covered today? Add lesson details or notes...">${escapeHtml(t.note||'')}</textarea>
+      <div class="task-move-row">
+        <input type="date" class="task-move-date" value="${keyToIsoDate(key)}" />
+        <button type="button" class="task-move-btn">Move to this date</button>
+      </div>
     </div>
     <div class="task-assign">
       <select>${studentOptions}</select>
@@ -2996,7 +3377,7 @@ function renderTaskCard(t, key){
   card.addEventListener('dragstart', (e)=>{
     dragPayload = {type:'task', taskId:t.id, fromKey:key};
     card.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
+    if(e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
   });
   card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
 
@@ -3011,6 +3392,21 @@ function renderTaskCard(t, key){
   noteInput.addEventListener('change', ()=>{
     t.note = noteInput.value;
     saveState();
+  });
+
+  card.querySelector('.task-move-btn').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const dateVal = card.querySelector('.task-move-date').value;
+    if(!dateVal) return;
+    const newDate = parseIsoDate(dateVal);
+    const {weekOffset, dayIndex} = dateToSlot(newDate);
+    const newKey = weekOffset + '|' + dayIndex;
+    if(newKey === key) return;
+    state.schedule[key] = (state.schedule[key] || []).filter(x=>x.id !== t.id);
+    if(!state.schedule[newKey]) state.schedule[newKey] = [];
+    state.schedule[newKey].push(t);
+    saveState();
+    renderCalendar();
   });
 
   const assignSelect = card.querySelector('.task-assign select');
@@ -3256,6 +3652,40 @@ function attendanceStatusLabel(status){
   return 'Tap to mark';
 }
 
+function printAttendanceReport(range){
+  const printArea = document.getElementById('printArea');
+  const rangeLabel = attendancePeriodLabel(range);
+  let html = `<div class="print-title">${escapeHtml(state.title || 'Homeschool Planner')} — Attendance</div>`;
+  html += `<div class="print-sub">${escapeHtml(rangeLabel)} &middot; Printed ${new Date().toLocaleDateString()}</div>`;
+
+  state.students.forEach(s=>{
+    const record = state.attendance[s.id] || {};
+    const dates = Object.keys(record)
+      .filter(d => isDateInRange(d, range.start, range.end))
+      .sort();
+    const present = dates.filter(d=>record[d]==='present').length;
+    const absent = dates.filter(d=>record[d]==='absent').length;
+    const excused = dates.filter(d=>record[d]==='excused').length;
+
+    html += `<div class="print-student"><h4>${escapeHtml(s.name)}</h4>`;
+    if(dates.length === 0){
+      html += `<p class="print-stats">No attendance logged in this range.</p>`;
+    } else {
+      html += `<table class="print-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>`;
+      dates.forEach(d=>{
+        const dateLabel = parseIsoDate(d).toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric', year:'numeric'});
+        html += `<tr><td>${dateLabel}</td><td>${attendanceStatusLabel(record[d])}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      html += `<p class="print-stats">Present: ${present} &nbsp; Absent: ${absent} &nbsp; Excused: ${excused} &nbsp; Total logged: ${dates.length}</p>`;
+    }
+    html += `</div>`;
+  });
+
+  printArea.innerHTML = html;
+  window.print();
+}
+
 function renderAttendancePage(){
   const page = document.getElementById('attendancePage');
   page.innerHTML = '';
@@ -3330,6 +3760,14 @@ function renderAttendancePage(){
   periodLabelEl.className = 'period-label';
   periodLabelEl.textContent = 'Showing: ' + attendancePeriodLabel(range);
   filterPanel.appendChild(periodLabelEl);
+
+  const printBtn = document.createElement('button');
+  printBtn.type = 'button';
+  printBtn.className = 'period-btn';
+  printBtn.style.marginTop = '4px';
+  printBtn.textContent = '\ud83d\uddb6\ufe0f Print attendance for this range';
+  printBtn.addEventListener('click', ()=> printAttendanceReport(range));
+  filterPanel.appendChild(printBtn);
 
   page.appendChild(filterPanel);
 
@@ -3417,25 +3855,40 @@ function renderChoreShelf(){
   const list = document.getElementById('choreList');
   if(!list) return;
   list.innerHTML = '';
+  const todayIso = isoDate(new Date());
   state.chores.forEach(chore=>{
     const card = document.createElement('div');
     card.className = 'chore-shelf-card';
     card.style.borderLeftColor = chore.color;
     card.draggable = true;
+
+    const studentOptions = state.students.length
+      ? state.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')
+      : '<option value="">No students yet</option>';
+
     card.innerHTML = `
       <div class="chore-shelf-top">
         <span class="chore-shelf-name">${escapeHtml(chore.name)}</span>
+        <button class="repeat-toggle" title="Assign to a student">&#128197;</button>
         <button class="del" title="Remove">&times;</button>
       </div>
       <label class="chore-points-label">Points
         <input type="number" class="chore-points-input" min="0" value="${chore.points || 0}" />
       </label>
+      <div class="repeat-row" style="display:none;">
+        <div class="repeat-fields">
+          <select class="chore-once-student">${studentOptions}</select>
+          <input type="date" class="chore-once-date" value="${todayIso}" />
+          <button class="go chore-once-confirm">Assign</button>
+        </div>
+        <p class="repeat-status"></p>
+      </div>
     `;
 
     card.addEventListener('dragstart', (e)=>{
       dragPayload = {type:'chore', subjectId: chore.id};
       card.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'copy';
+      if(e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
     });
     card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
 
@@ -3453,6 +3906,30 @@ function renderChoreShelf(){
       saveState();
     });
     pointsInput.addEventListener('click', (e)=> e.stopPropagation());
+
+    const choreRepeatRow = card.querySelector('.repeat-row');
+    card.querySelector('.repeat-toggle').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      choreRepeatRow.style.display = choreRepeatRow.style.display === 'none' ? 'flex' : 'none';
+    });
+    choreRepeatRow.addEventListener('click', (e)=> e.stopPropagation());
+
+    card.querySelector('.chore-once-confirm').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const statusEl = card.querySelector('.repeat-status');
+      const studentId = card.querySelector('.chore-once-student').value;
+      const dateVal = card.querySelector('.chore-once-date').value;
+      if(!studentId){ statusEl.textContent = 'Add a student first.'; return; }
+      if(!dateVal){ statusEl.textContent = 'Pick a date.'; return; }
+      if(!state.choreLog[dateVal]) state.choreLog[dateVal] = {};
+      if(!state.choreLog[dateVal][studentId]) state.choreLog[dateVal][studentId] = [];
+      state.choreLog[dateVal][studentId].push({
+        id: uid(), name: chore.name, color: chore.color, points: chore.points || 0, done:false
+      });
+      saveState();
+      statusEl.textContent = `Assigned for ${parseIsoDate(dateVal).toLocaleDateString(undefined,{month:'short',day:'numeric'})}.`;
+      if(currentView === 'chores') renderChoresPage();
+    });
 
     list.appendChild(card);
   });
@@ -3504,7 +3981,7 @@ function renderRewardsShelf(){
     card.addEventListener('dragstart', (e)=>{
       dragPayload = {type:'reward', rewardId: reward.id};
       card.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'copy';
+      if(e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
     });
     card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
 
@@ -4085,7 +4562,7 @@ function renderLessonBank(subj){
     chip.addEventListener('dragstart', (e)=>{
       dragPayload = {type:'lesson', name: lesson.text, color: subj.color, subjectId: subj.id, studentId: lesson.studentId || null};
       chip.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'copy';
+      if(e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
     });
     chip.addEventListener('dragend', ()=> chip.classList.remove('dragging'));
 
@@ -4801,7 +5278,61 @@ function renderSubjectPage(){
   });
 }
 
+function applyTheme(){
+  const preset = THEME_PRESETS[state.theme] || THEME_PRESETS.notebook;
+  Object.keys(preset).forEach(key=>{
+    if(key === 'label') return;
+    document.documentElement.style.setProperty(key, preset[key]);
+  });
+}
+
+function applyFont(){
+  const preset = FONT_PRESETS[state.fontChoice] || FONT_PRESETS.notebook;
+  Object.values(FONT_PRESETS).forEach(p=>{
+    if(p.bodyClass) document.body.classList.remove(p.bodyClass);
+  });
+  if(preset.bodyClass) document.body.classList.add(preset.bodyClass);
+}
+
+function renderCustomizePanel(){
+  const themeRow = document.getElementById('themeSwatchRow');
+  themeRow.innerHTML = '';
+  Object.keys(THEME_PRESETS).forEach(key=>{
+    const preset = THEME_PRESETS[key];
+    const sw = document.createElement('div');
+    sw.className = 'theme-swatch' + (state.theme===key ? ' selected' : '');
+    sw.title = preset.label;
+    sw.innerHTML = `<span style="background:${preset['--paper-dark']}"></span><span style="background:${preset['--cover']}"></span><span style="background:${preset['--moss']}"></span>`;
+    sw.addEventListener('click', ()=>{
+      state.theme = key;
+      applyTheme();
+      saveState();
+      renderCustomizePanel();
+    });
+    themeRow.appendChild(sw);
+  });
+
+  const fontRow = document.getElementById('fontOptionRow');
+  fontRow.innerHTML = '';
+  Object.keys(FONT_PRESETS).forEach(key=>{
+    const preset = FONT_PRESETS[key];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'font-option-btn' + (state.fontChoice===key ? ' selected' : '');
+    btn.textContent = preset.label;
+    btn.addEventListener('click', ()=>{
+      state.fontChoice = key;
+      applyFont();
+      saveState();
+      renderCustomizePanel();
+    });
+    fontRow.appendChild(btn);
+  });
+}
+
 function render(){
+  applyTheme();
+  applyFont();
   document.getElementById('titleInput').value = state.title;
   document.getElementById('toggleWeekend').textContent = state.showWeekend ? 'Hide weekend' : 'Show weekend';
   populateHourSelects();
@@ -4811,11 +5342,17 @@ function render(){
   renderRoster();
   renderSubjectShelf();
   renderExtraShelf();
+  renderCustomizePanel();
   renderCalendar();
   renderView();
 }
 
 // --- Event wiring ---
+document.getElementById('customizeToggle').addEventListener('click', ()=>{
+  const panel = document.getElementById('customizePanel');
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+});
+
 document.getElementById('titleInput').addEventListener('change', (e)=>{
   state.title = e.target.value || 'Our Homeschool Week';
   saveState();
@@ -5135,6 +5672,37 @@ document.getElementById('exportIcsBtn').addEventListener('click', ()=>{
   const ics = buildICS(events, state.title || 'Homeschool Planner');
   downloadICS(ics, 'homeschool-planner-' + state.calendarView + '.ics');
   statusEl.textContent = `Exported ${events.length} event${events.length===1?'':'s'} — open the downloaded file, or import/share it in Google Calendar, Apple Calendar, or Outlook.`;
+});
+
+document.getElementById('clearAllLessonsBtn').addEventListener('click', function(){
+  const totalLessons = state.subjects.reduce((sum,s)=> sum + ((s.lessons||[]).length), 0);
+  const statusEl = document.getElementById('syncStatus');
+  if(totalLessons === 0){
+    statusEl.textContent = 'No lesson plans to clear.';
+    return;
+  }
+  if(document.querySelector('.clear-confirm')) return;
+  this.style.display = 'none';
+  const confirmWrap = document.createElement('span');
+  confirmWrap.className = 'clear-confirm';
+  confirmWrap.innerHTML = `
+    <span class="clear-confirm-text">Clear all ${totalLessons} lesson plan${totalLessons===1?'':'s'} across every subject? This won't touch anything already on the calendar.</span>
+    <button type="button" class="clear-yes">Yes, clear</button>
+    <button type="button" class="clear-no">Cancel</button>
+  `;
+  this.insertAdjacentElement('afterend', confirmWrap);
+  const btn = this;
+  confirmWrap.querySelector('.clear-yes').addEventListener('click', ()=>{
+    state.subjects.forEach(s=>{ s.lessons = []; });
+    saveState();
+    confirmWrap.remove();
+    btn.style.display = '';
+    statusEl.textContent = `Cleared ${totalLessons} lesson plan${totalLessons===1?'':'s'}.`;
+  });
+  confirmWrap.querySelector('.clear-no').addEventListener('click', ()=>{
+    confirmWrap.remove();
+    btn.style.display = '';
+  });
 });
 
 document.getElementById('importIcsInput').addEventListener('change', ()=>{
