@@ -2688,6 +2688,31 @@ let expandedTaskIds = new Set(); // task ids currently expanded to show lesson n
 
 function uid(){ return 't' + Math.random().toString(36).slice(2,10); }
 
+function normalizeDoneFlags(){
+  let fixedCount = 0;
+  Object.values(state.schedule).forEach(tasks=>{
+    (tasks||[]).forEach(t=>{
+      const shouldBeTrue = (t.done === true || t.done === 'true');
+      if(t.done !== shouldBeTrue){
+        t.done = shouldBeTrue;
+        fixedCount++;
+      }
+    });
+  });
+  Object.values(state.choreLog).forEach(dayLog=>{
+    Object.values(dayLog||{}).forEach(items=>{
+      (items||[]).forEach(item=>{
+        const shouldBeTrue = (item.done === true || item.done === 'true');
+        if(item.done !== shouldBeTrue){
+          item.done = shouldBeTrue;
+          fixedCount++;
+        }
+      });
+    });
+  });
+  return fixedCount;
+}
+
 function rolloverMissedLessons(){
   const todayIso = isoDate(new Date());
   const todayDate = parseIsoDate(todayIso);
@@ -2699,7 +2724,7 @@ function rolloverMissedLessons(){
 
     for(let i = tasks.length - 1; i >= 0; i--){
       const t = tasks[i];
-      if(t.done) continue;
+      if(t.done === true) continue;
       if(!t.subjectId) continue; // only roll actual subject-linked lessons/work, not extracurriculars
 
       const parts = key.split('|').map(Number);
@@ -2762,8 +2787,9 @@ async function loadState(){
     }
   }
 
+  const fixedDoneFlags = normalizeDoneFlags();
   const rolled = rolloverMissedLessons();
-  if(rolled > 0){
+  if(fixedDoneFlags > 0 || rolled > 0){
     try{ await saveState(); }catch(e){ console.error('Rollover save failed', e); }
   }
 
@@ -2877,7 +2903,7 @@ function weekProgress(studentId){
     tasks.forEach(t=>{
       if(t.studentId === studentId){
         total++;
-        if(t.done) done++;
+        if(t.done === true) done++;
       }
     });
   });
@@ -3302,7 +3328,7 @@ function printDailyRecord(dateIso){
     tasks.forEach(t=>{
       const student = state.students.find(s=>s.id===t.studentId);
       const timeLabel = t.slot ? formatSlotLabel(t.slot) : 'Any time';
-      html += `<tr><td>${escapeHtml(timeLabel)}</td><td>${escapeHtml(t.name)}</td><td>${student?escapeHtml(student.name):'—'}</td><td>${t.done?'Yes':'No'}</td></tr>`;
+      html += `<tr><td>${escapeHtml(timeLabel)}</td><td>${escapeHtml(t.name)}</td><td>${student?escapeHtml(student.name):'—'}</td><td>${t.done===true?'Yes':'No'}</td></tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -3529,7 +3555,7 @@ function keyToIsoDate(key){
 function renderTaskCard(t, key){
   const card = document.createElement('div');
   const isExpanded = expandedTaskIds.has(t.id);
-  card.className = 'task-card' + (t.done ? ' is-done' : '') + (isExpanded ? ' expanded' : '');
+  card.className = 'task-card' + (t.done === true ? ' is-done' : '') + (isExpanded ? ' expanded' : '');
   card.style.borderLeftColor = t.color;
   card.draggable = true;
 
@@ -3561,7 +3587,7 @@ function renderTaskCard(t, key){
     </div>
     <div class="task-assign">
       <select>${studentOptions}</select>
-      <label class="task-done"><input type="checkbox" ${t.done?'checked':''} /> done</label>
+      <label class="task-done"><input type="checkbox" ${t.done===true?'checked':''} /> done</label>
     </div>
   `;
 
@@ -3617,7 +3643,7 @@ function renderTaskCard(t, key){
   const doneCheckbox = card.querySelector('.task-done input');
   doneCheckbox.addEventListener('change', ()=>{
     t.done = doneCheckbox.checked;
-    card.classList.toggle('is-done', t.done);
+    card.classList.toggle('is-done', t.done === true);
     saveState();
     renderRoster();
   });
@@ -4139,7 +4165,7 @@ function studentAllTimeChorePoints(studentId){
     const dayLog = state.choreLog[dateKey] || {};
     const items = dayLog[studentId] || [];
     items.forEach(item=>{
-      if(item.done) total += (item.points || 0);
+      if(item.done === true) total += (item.points || 0);
     });
   });
   return total;
@@ -4485,8 +4511,8 @@ function renderChoresPage(){
 
     const cardHead = document.createElement('div');
     cardHead.className = 'chore-list-head';
-    const doneCount = items.filter(i=>i.done).length;
-    const earnedPoints = items.filter(i=>i.done).reduce((sum,i)=> sum + (i.points||0), 0);
+    const doneCount = items.filter(i=>i.done===true).length;
+    const earnedPoints = items.filter(i=>i.done===true).reduce((sum,i)=> sum + (i.points||0), 0);
     const possiblePoints = items.reduce((sum,i)=> sum + (i.points||0), 0);
     const available = availableChorePoints(s.id);
     cardHead.innerHTML = `
@@ -4611,11 +4637,11 @@ function renderChoresPage(){
 
     items.forEach(item=>{
       const row = document.createElement('div');
-      row.className = 'chore-item' + (item.done ? ' is-done' : '');
+      row.className = 'chore-item' + (item.done===true ? ' is-done' : '');
       row.style.borderLeft = '6px solid ' + item.color;
       row.innerHTML = `
         <label class="chore-item-check">
-          <input type="checkbox" ${item.done?'checked':''} />
+          <input type="checkbox" ${item.done===true?'checked':''} />
           <span class="chore-item-name">${escapeHtml(item.name)}</span>
         </label>
         <span class="chore-item-points">+${item.points||0}</span>
@@ -5479,14 +5505,14 @@ function renderSubjectPage(){
     const student = state.students.find(s=>s.id===t.studentId);
 
     const row = document.createElement('div');
-    row.className = 'subject-entry' + (t.done ? ' is-done' : '');
+    row.className = 'subject-entry' + (t.done===true ? ' is-done' : '');
     row.innerHTML = `
       <div>
         <div class="entry-day">${dateLabel}</div>
         <div class="entry-time">${slotLabel}${student ? ' &middot; ' + escapeHtml(student.name) : ''}</div>
       </div>
       <textarea class="entry-note" placeholder="What's covered this lesson? Add notes...">${escapeHtml(t.note||'')}</textarea>
-      <label class="entry-done"><input type="checkbox" ${t.done?'checked':''} /> done</label>
+      <label class="entry-done"><input type="checkbox" ${t.done===true?'checked':''} /> done</label>
     `;
 
     const noteInput = row.querySelector('.entry-note');
@@ -5498,7 +5524,7 @@ function renderSubjectPage(){
     const doneInput = row.querySelector('.entry-done input');
     doneInput.addEventListener('change', ()=>{
       t.done = doneInput.checked;
-      row.classList.toggle('is-done', t.done);
+      row.classList.toggle('is-done', t.done === true);
       saveState();
     });
 
@@ -6030,8 +6056,9 @@ async function refreshFromServer(){
     const result = await window.fbLoadState();
     if(result && result.ok && result.data){
       state = Object.assign(state, result.data);
+      const fixedDoneFlags = normalizeDoneFlags();
       const rolled = rolloverMissedLessons();
-      if(rolled > 0){
+      if(fixedDoneFlags > 0 || rolled > 0){
         try{ await saveState(); }catch(e){ console.error('Rollover save failed', e); }
       }
       render();
