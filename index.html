@@ -332,6 +332,7 @@
     display:flex;
     flex-direction:column;
     gap:4px;
+    overflow:hidden;
   }
   .cal-cell.half-cell{ border-top:1px dashed var(--rule); }
   .cal-cell.anytime-cell{
@@ -354,10 +355,13 @@
     gap:3px;
     cursor:pointer;
     box-shadow:0 1px 2px rgba(0,0,0,0.06);
+    max-width:100%;
+    overflow:hidden;
+    box-sizing:border-box;
   }
   .task-card.dragging{ opacity:.35; }
-  .task-top{ display:flex; align-items:center; gap:5px; cursor:grab; }
-  .task-top .task-name{ flex:1; font-weight:600; }
+  .task-top{ display:flex; align-items:center; gap:5px; cursor:grab; min-width:0; }
+  .task-top .task-name{ flex:1; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .task-top .chevron{
     font-size:9px;
     color:var(--ink-soft);
@@ -663,24 +667,31 @@
 
   /* ---- Per-student task controls ---- */
   .task-assign{
-    display:flex; align-items:center; gap:6px;
+    display:flex; align-items:center; gap:4px;
     margin-top:1px;
+    flex-wrap:wrap;
+    min-width:0;
   }
   .task-assign select{
     flex:1;
+    min-width:0;
     font-family:'Inter',sans-serif;
     font-size:10.5px;
     color:var(--ink-soft);
     background:transparent;
     border:none;
     padding:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .task-assign select:focus{ outline:none; }
   .task-done{
-    display:flex; align-items:center; gap:5px;
+    display:flex; align-items:center; gap:3px;
     font-size:10.5px;
     color:var(--ink-soft);
     cursor:pointer;
+    flex-shrink:0;
+    white-space:nowrap;
   }
   .task-done input[type=checkbox]{
     accent-color: var(--moss);
